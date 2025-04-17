@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "60872615938",
+    "project_id": "jooyful-hea",
+    "storage_bucket": "jooyful-hea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:60872615938:android:693e77830c3be3150d9f1b",
+        "android_client_info": {
+          "package_name": "com.example.jooyful_heaven"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC1_AWejtbywh1_1yyEtToneKggrlO-bA0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
