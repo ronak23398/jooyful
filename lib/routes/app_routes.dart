@@ -2,8 +2,14 @@ import 'package:get/get.dart';
 import 'package:jooyful_heaven/bindings/auth_binding.dart';
 import 'package:jooyful_heaven/bindings/client_binding.dart';
 import 'package:jooyful_heaven/bindings/owner_binding.dart';
+import 'package:jooyful_heaven/controllers/owner_controller.dart';
 import 'package:jooyful_heaven/views/client/client_home_screen.dart';
+import 'package:jooyful_heaven/views/owner/all_clients_screen.dart';
+import 'package:jooyful_heaven/views/owner/all_counsellors_screen.dart';
+import 'package:jooyful_heaven/views/owner/all_interns_screen.dart';
+import 'package:jooyful_heaven/views/owner/assign_counsellor_screen.dart';
 import 'package:jooyful_heaven/views/owner/owner_home_screen.dart';
+import 'package:jooyful_heaven/views/owner/upload_article_screen.dart';
 import '../views/auth/login_screen.dart';
 import '../views/auth/signup_screen.dart';
 
@@ -48,6 +54,46 @@ final appPages = [
     page: () => ClientHomeScreen(),
     binding: ClientBinding(),
   ),
+   GetPage(
+      name: AppRoutes.ASSIGN_COUNSELOR, 
+      page: () => AssignCounselorScreen(),
+      binding: BindingsBuilder(() {
+        // Make sure OwnerController is available
+        Get.lazyPut<OwnerController>(() => OwnerController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.ALL_CLIENTS, 
+      page: () => AllClientsScreen(),
+      binding: BindingsBuilder(() {
+        // Make sure OwnerController is available
+        Get.lazyPut<OwnerController>(() => OwnerController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.ALL_COUNSELORS, 
+      page: () => AllCounselorsScreen(),
+      binding: BindingsBuilder(() {
+        // Make sure OwnerController is available
+        Get.lazyPut<OwnerController>(() => OwnerController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.ALL_INTERNS, 
+      page: () => AllInternsScreen(),
+      binding: BindingsBuilder(() {
+        // Make sure OwnerController is available
+        Get.lazyPut<OwnerController>(() => OwnerController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.UPLOAD_ARTICLE, 
+      page: () => UploadArticleScreen(),
+      binding: BindingsBuilder(() {
+        // Make sure OwnerController is available
+        Get.lazyPut<OwnerController>(() => OwnerController());
+      }),
+    ),
   // GetPage(
   //   name: AppRoutes.COUNSELOR_HOME,
   //   page: () => CounselorHomeScreen(),

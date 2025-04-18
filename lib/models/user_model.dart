@@ -2,42 +2,47 @@ class UserModel {
   final String uid;
   final String name;
   final String email;
-  final String role; // 'client', 'counselor', 'intern', 'owner'
-  final String? assignedCounselorId; // For clients only
-  final Map<String, dynamic>? profileData; // Additional profile data
-
+  final String role;
+  final String? assignedCounselorId;
+  final String? photoUrl;
+  final String? phoneNumber;
+  final DateTime createdAt;
+  
   UserModel({
     required this.uid,
     required this.name,
     required this.email,
     required this.role,
     this.assignedCounselorId,
-    this.profileData,
+    this.photoUrl,
+    this.phoneNumber,
+    required this.createdAt,
   });
-
-  // Convert model to JSON
-  Map<String, dynamic> toJson() {
+  
+  factory UserModel.fromMap(Map<String, dynamic> map, String uid) {
+    return UserModel(
+      uid: uid,
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
+      role: map['role'] ?? 'client',
+      assignedCounselorId: map['assignedCounselorId'],
+      photoUrl: map['photoUrl'],
+      phoneNumber: map['phoneNumber'],
+      createdAt: map['createdAt'] != null 
+        ? DateTime.fromMillisecondsSinceEpoch(map['createdAt']) 
+        : DateTime.now(),
+    );
+  }
+  
+  Map<String, dynamic> toMap() {
     return {
-      'uid': uid,
       'name': name,
       'email': email,
       'role': role,
       'assignedCounselorId': assignedCounselorId,
-      'profileData': profileData,
+      'photoUrl': photoUrl,
+      'phoneNumber': phoneNumber,
+      'createdAt': createdAt.millisecondsSinceEpoch,
     };
-  }
-
-  // Create model from JSON
-  factory UserModel.fromJson(Map<dynamic, dynamic> json) {
-    return UserModel(
-      uid: json['uid'] as String,
-      name: json['name'] as String,
-      email: json['email'] as String,
-      role: json['role'] as String,
-      assignedCounselorId: json['assignedCounselorId'] as String?,
-      profileData: json['profileData'] != null 
-          ? Map<String, dynamic>.from(json['profileData']) 
-          : null,
-    );
   }
 }

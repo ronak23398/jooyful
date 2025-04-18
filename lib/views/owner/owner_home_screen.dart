@@ -11,16 +11,16 @@ class OwnerHomeScreen extends GetView<OwnerController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Owner Dashboard'),
+        title: const Text('Owner Dashboard'),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () => authController.logout(),
           ),
         ],
       ),
       body: Obx(() => controller.isLoading.value 
-        ? Center(child: CircularProgressIndicator())
+        ? const Center(child: CircularProgressIndicator())
         : Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -28,7 +28,7 @@ class OwnerHomeScreen extends GetView<OwnerController> {
               children: [
                 // Welcome section
                 Container(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.blue.shade100,
                     borderRadius: BorderRadius.circular(12),
@@ -38,13 +38,13 @@ class OwnerHomeScreen extends GetView<OwnerController> {
                     children: [
                       Text(
                         'Welcome, ${authController.userModel.value?.name ?? "Owner"}!',
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 8),
-                      Text(
+                      const SizedBox(height: 8),
+                      const Text(
                         'Manage your mental health platform from here.',
                         style: TextStyle(fontSize: 16),
                       ),
@@ -52,80 +52,85 @@ class OwnerHomeScreen extends GetView<OwnerController> {
                   ),
                 ),
                 
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 
                 // Stats section
                 Row(
                   children: [
-                    _buildStatCard('Clients', controller.clients.length.toString(), Colors.green.shade100, Icons.people),
-                    SizedBox(width: 12),
-                    _buildStatCard('Counselors', controller.counselors.length.toString(), Colors.orange.shade100, Icons.medical_services),
-                    SizedBox(width: 12),
-                    _buildStatCard('Interns', controller.interns.length.toString(), Colors.purple.shade100, Icons.school),
+                    _buildStatCard('Clients', controller.clientCount.toString(), Colors.green.shade100, Icons.people),
+                    const SizedBox(width: 12),
+                    _buildStatCard('Counselors', controller.counselorCount.toString(), Colors.orange.shade100, Icons.medical_services),
+                    const SizedBox(width: 12),
+                    _buildStatCard('Interns', controller.internCount.toString(), Colors.purple.shade100, Icons.school),
                   ],
                 ),
                 
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 
                 // Counselor requests alert
-                if (controller.counselorRequests.isNotEmpty)
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.amber),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.notifications_active, color: Colors.amber.shade800),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${controller.counselorRequests.length} clients requesting counselor assignment',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                Obx(() {
+                  if (controller.pendingRequests.isNotEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.notifications_active, color: Colors.amber.shade800),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${controller.pendingRequests.length} clients requesting counselor assignment',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () => Get.toNamed(AppRoutes.ASSIGN_COUNSELOR),
-                          child: Text('HANDLE'),
-                        ),
-                      ],
-                    ),
-                  ),
+                          TextButton(
+                            onPressed: () => Get.toNamed(AppRoutes.ASSIGN_COUNSELOR),
+                            child: const Text('HANDLE'),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    return const SizedBox.shrink();
+                  }
+                }),
                 
-                SizedBox(height: 32),
+                const SizedBox(height: 32),
                 
                 // Navigation buttons
-                Text(
+                const Text(
                   'Quick Actions',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 _buildActionButton(
                   'View All Clients',
                   Icons.people,
                   Colors.green,
                   () => Get.toNamed(AppRoutes.ALL_CLIENTS),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 _buildActionButton(
                   'View All Counselors',
                   Icons.medical_services,
                   Colors.orange,
                   () => Get.toNamed(AppRoutes.ALL_COUNSELORS),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 _buildActionButton(
                   'View All Interns',
                   Icons.school,
                   Colors.purple,
                   () => Get.toNamed(AppRoutes.ALL_INTERNS),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 _buildActionButton(
                   'Upload Article/Resource',
                   Icons.upload_file,
@@ -142,7 +147,7 @@ class OwnerHomeScreen extends GetView<OwnerController> {
   Widget _buildStatCard(String title, String value, Color color, IconData icon) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(12),
@@ -151,17 +156,17 @@ class OwnerHomeScreen extends GetView<OwnerController> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(icon, size: 28),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               value,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
               ),
             ),
@@ -177,16 +182,16 @@ class OwnerHomeScreen extends GetView<OwnerController> {
       style: ElevatedButton.styleFrom(
         backgroundColor: color.withOpacity(0.1),
         foregroundColor: color,
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         alignment: Alignment.centerLeft,
       ),
       child: Row(
         children: [
           Icon(icon),
-          SizedBox(width: 12),
-          Text(title, style: TextStyle(fontSize: 16)),
-          Spacer(),
-          Icon(Icons.arrow_forward_ios, size: 16),
+          const SizedBox(width: 12),
+          Text(title, style: const TextStyle(fontSize: 16)),
+          const Spacer(),
+          const Icon(Icons.arrow_forward_ios, size: 16),
         ],
       ),
     );

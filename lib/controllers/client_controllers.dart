@@ -19,7 +19,51 @@ class ClientController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    loadClientData();
+    // Show basic UI first, then load data
+    Future.delayed(Duration(milliseconds: 100), () {
+      loadBasicData();
+    });
+  }
+
+  Future<void> loadBasicData() async {
+    try {
+      isLoading.value = true;
+      
+      // First, load only critical data
+      UserModel? userData = _authController.userModel.value;
+      if (userData != null) {
+        assignedCounselorId.value = userData.assignedCounselorId ?? '';
+        
+        // Load tests first (these are mocked data)
+        await loadTests();
+        
+        // Then check for counselor request (lightweight operation with the new optimized method)
+        await checkCounselorRequest(userData.uid);
+        
+        // Now trigger background loading of heavier data
+        _loadRemainingDataInBackground(userData);
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to load data: ${e.toString()}');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> _loadRemainingDataInBackground(UserModel userData) async {
+    // Load articles in background
+    loadArticles();
+    
+    // Load counselor data if assigned
+    if (assignedCounselorId.value.isNotEmpty) {
+      counselor.value = await _dbService.getUserData(assignedCounselorId.value);
+    }
+    
+    // Load appointments
+    loadAppointments(userData.uid);
+    
+    // Load test results
+    loadTestResults(userData.uid);
   }
 
   Future<void> loadClientData() async {
@@ -36,7 +80,7 @@ class ClientController extends GetxController {
           counselor.value = await _dbService.getUserData(assignedCounselorId.value);
         }
         
-        // Check if there's a pending counselor request
+        // Check if there's a pending counselor request with the optimized method
         await checkCounselorRequest(userData.uid);
         
         // Load articles
@@ -60,20 +104,27 @@ class ClientController extends GetxController {
 
   Future<void> loadArticles() async {
     try {
-      // Get articles from different categories
+      // Load categories one by one
+      List<Map<String, dynamic>> allArticles = [];
+      
+      // Get mental health articles first
       List<Map<String, dynamic>> mentalHealthArticles = 
           await _dbService.getArticlesByCategory('mental-health');
+      allArticles.addAll(mentalHealthArticles);
+      articles.value = allArticles; // Update UI with first batch
+      
+      // Get anxiety articles next
       List<Map<String, dynamic>> anxietyArticles = 
           await _dbService.getArticlesByCategory('anxiety');
+      allArticles.addAll(anxietyArticles);
+      articles.value = allArticles; // Update UI with second batch
+      
+      // Get depression articles last
       List<Map<String, dynamic>> depressionArticles = 
           await _dbService.getArticlesByCategory('depression');
+      allArticles.addAll(depressionArticles);
+      articles.value = allArticles; // Update UI with all articles
       
-      // Combine all articles
-      articles.value = [
-        ...mentalHealthArticles,
-        ...anxietyArticles,
-        ...depressionArticles,
-      ];
     } catch (e) {
       Get.snackbar('Error', 'Failed to load articles: ${e.toString()}');
     }
@@ -110,10 +161,11 @@ class ClientController extends GetxController {
 
   Future<void> checkCounselorRequest(String userId) async {
     try {
-      List<Map<String, dynamic>> requests = await _dbService.getCounselorRequests();
-      hasCounselorRequest.value = requests.any((request) => request['clientId'] == userId);
+      // Use the optimized method that only checks this specific user's request
+      hasCounselorRequest.value = await _dbService.hasClientCounselorRequest(userId);
     } catch (e) {
-      Get.snackbar('Error', 'Failed to check counselor requests: ${e.toString()}');
+      print("Error checking counselor request: $e");
+      hasCounselorRequest.value = false;
     }
   }
 

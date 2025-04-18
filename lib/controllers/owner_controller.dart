@@ -5,11 +5,17 @@ import '../services/realtime_db_service.dart';
 class OwnerController extends GetxController {
   final RealtimeDbService _dbService = RealtimeDbService();
   
+  // Observable variables
+  final RxBool isLoading = false.obs;
   final RxList<UserModel> clients = <UserModel>[].obs;
   final RxList<UserModel> counselors = <UserModel>[].obs;
   final RxList<UserModel> interns = <UserModel>[].obs;
-  final RxBool isLoading = false.obs;
-  final RxList<Map<String, dynamic>> counselorRequests = <Map<String, dynamic>>[].obs;
+  final RxList<Map<String, dynamic>> pendingRequests = <Map<String, dynamic>>[].obs;
+  
+  // Computed values for counts
+  int get clientCount => clients.length;
+  int get counselorCount => counselors.length;
+  int get internCount => interns.length;
 
   @override
   void onInit() {
@@ -22,13 +28,13 @@ class OwnerController extends GetxController {
     try {
       isLoading.value = true;
       
-      // Fetch users by role
-      final allUsers = await _dbService.getAllUsers();
-      
-      // Clear current lists
+      // Clear existing lists
       clients.clear();
       counselors.clear();
       interns.clear();
+      
+      // Fetch all users from database
+      List<UserModel> allUsers = await _dbService.getAllUsers();
       
       // Sort users by role
       for (var user in allUsers) {
@@ -42,11 +48,13 @@ class OwnerController extends GetxController {
           case 'intern':
             interns.add(user);
             break;
+          default:
+            // Owner or unknown role - ignore
+            break;
         }
       }
-      
     } catch (e) {
-      Get.snackbar('Error', 'Failed to fetch users: ${e.toString()}');
+      Get.snackbar('Error', 'Failed to load users: ${e.toString()}');
     } finally {
       isLoading.value = false;
     }
@@ -54,18 +62,41 @@ class OwnerController extends GetxController {
 
   Future<void> fetchCounselorRequests() async {
     try {
-      final requests = await _dbService.getCounselorRequests();
-      counselorRequests.value = requests;
+      // Fetch pending counselor requests from database
+      List<Map<String, dynamic>> requests = await _dbService.getCounselorRequests();
+      pendingRequests.value = requests.where((req) => req['status'] == 'pending').toList();
     } catch (e) {
-      Get.snackbar('Error', 'Failed to fetch counselor requests: ${e.toString()}');
+      Get.snackbar('Error', 'Failed to load counselor requests: ${e.toString()}');
     }
   }
 
-  Future<void> assignCounselorToClient(String clientId, String counselorId) async {
+  // Get a client by ID
+  UserModel? getClientById(String clientId) {
+    try {
+      return clients.firstWhere((client) => client.uid == clientId);
+    } catch (e) {
+      print("Client not found: $clientId");
+      return null;
+    }
+  }
+
+  // Method to assign counselor to client
+  Future<void> assignCounselor(String clientId, String counselorId) async {
     try {
       isLoading.value = true;
+      
+      // Get counselor details for logging
+      final counselor = counselors.firstWhere((c) => c.uid == counselorId);
+      
+      print("Assigning counselor ${counselor.name} (ID: $counselorId) to client ID: $clientId");
+      
+      // Update client with assigned counselor
       await _dbService.assignCounselorToClient(clientId, counselorId);
-      await _dbService.updateCounselorRequestStatus(clientId, 'assigned');
+      
+      // Update request status to completed
+      await _dbService.updateCounselorRequestStatus(clientId, 'completed');
+      
+      print("Counselor successfully assigned");
       
       // Refresh data
       await fetchAllUsers();
@@ -73,21 +104,42 @@ class OwnerController extends GetxController {
       
       Get.snackbar('Success', 'Counselor assigned successfully');
     } catch (e) {
+      print("Error assigning counselor: $e");
       Get.snackbar('Error', 'Failed to assign counselor: ${e.toString()}');
     } finally {
       isLoading.value = false;
     }
   }
-
-  Future<void> uploadArticle(String title, String content, String category) async {
+  
+  // Method to unassign counselor from client
+  Future<void> unassignCounselor(String clientId) async {
     try {
       isLoading.value = true;
-      await _dbService.uploadArticle(title, content, category);
-      Get.snackbar('Success', 'Article uploaded successfully');
+      
+      // Update client to remove assigned counselor
+      await _dbService.assignCounselorToClient(clientId,null);
+      
+      // Refresh data
+      await fetchAllUsers();
+      
+      Get.snackbar('Success', 'Counselor unassigned successfully');
     } catch (e) {
-      Get.snackbar('Error', 'Failed to upload article: ${e.toString()}');
+      print("Error unassigning counselor: $e");
+      Get.snackbar('Error', 'Failed to unassign counselor: ${e.toString()}');
     } finally {
       isLoading.value = false;
     }
+  }
+  
+  // Method to filter counselors (could be used for search functionality)
+  List<UserModel> filterCounselors(String query) {
+    if (query.isEmpty) {
+      return counselors;
+    }
+    
+    return counselors.where((counselor) {
+      return counselor.name.toLowerCase().contains(query.toLowerCase()) ||
+             counselor.email.toLowerCase().contains(query.toLowerCase());
+    }).toList();
   }
 }

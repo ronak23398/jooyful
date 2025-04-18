@@ -1,5 +1,7 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:jooyful_heaven/models/article_model.dart';
 import '../models/user_model.dart';
+import '../models/test_model.dart';
 
 class RealtimeDbService {
   late final DatabaseReference _db;
@@ -10,21 +12,13 @@ class RealtimeDbService {
     database.databaseURL = 'https://jooyful-hea-default-rtdb.asia-southeast1.firebasedatabase.app';
     _db = database.ref();
   }
-  
-  // Create a new user
-  Future<void> createUser(UserModel user) async {
+    Future<void> createUser(UserModel user) async {
     try {
       print("RealtimeDbService: Starting to create user");
       print("Database path: users/${user.uid}");
       
-      // Test if the database connection works with a simpler write
-      await _db.child('test').set({
-        'timestamp': ServerValue.timestamp
-      });
-      print("Test write successful");
-      
       // Now try to write the user data
-      await _db.child('users').child(user.uid).set(user.toJson());
+      await _db.child('users').child(user.uid).set(user.toMap());
       print("User data written successfully");
     } catch (e) {
       print("Error creating user in database: $e");
@@ -35,14 +29,42 @@ class RealtimeDbService {
   // Get user data
   Future<UserModel> getUserData(String uid) async {
     try {
-      DataSnapshot snapshot = await _db.child('users').child(uid).get();
+      DatabaseReference userRef = _db.child('users').child(uid);
+      DataSnapshot snapshot = await userRef.get();
+      
       if (snapshot.exists) {
-        return UserModel.fromJson(snapshot.value as Map<dynamic, dynamic>);
+        Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+        return UserModel.fromMap(Map<String, dynamic>.from(data), uid);
       } else {
         throw Exception('User not found');
       }
     } catch (e) {
       print("Error getting user data: $e");
+      throw e;
+    }
+  }
+  
+  // Get all users
+  Future<List<UserModel>> getAllUsers() async {
+    try {
+      DataSnapshot snapshot = await _db.child('users').get();
+      
+      if (snapshot.exists && snapshot.value != null) {
+        Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+        List<UserModel> users = [];
+        
+        data.forEach((key, value) {
+          if (value is Map) {
+            users.add(UserModel.fromMap(Map<String, dynamic>.from(value), key.toString()));
+          }
+        });
+        
+        return users;
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print("Error getting all users: $e");
       throw e;
     }
   }
@@ -57,25 +79,7 @@ class RealtimeDbService {
     }
   }
   
-  // Get all users
-  Future<List<UserModel>> getAllUsers() async {
-    try {
-      DataSnapshot snapshot = await _db.child('users').get();
-      List<UserModel> users = [];
-      
-      if (snapshot.exists) {
-        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
-        values.forEach((key, value) {
-          users.add(UserModel.fromJson(value as Map<dynamic, dynamic>));
-        });
-      }
-      
-      return users;
-    } catch (e) {
-      print("Error getting all users: $e");
-      throw e;
-    }
-  }
+  
   
   // Get users by role
   Future<List<UserModel>> getUsersByRole(String role) async {
@@ -90,7 +94,7 @@ class RealtimeDbService {
       if (snapshot.exists) {
         Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
         values.forEach((key, value) {
-          users.add(UserModel.fromJson(value as Map<dynamic, dynamic>));
+          users.add(UserModel.fromMap(Map<String, dynamic>.from(value), key.toString()));
         });
       }
       
@@ -101,7 +105,30 @@ class RealtimeDbService {
     }
   }
   
-  // Request a counselor
+  // Get assigned clients for a counselor
+  Future<List<UserModel>> getAssignedClients(String counselorId) async {
+    try {
+      DataSnapshot snapshot = await _db.child('users')
+          .orderByChild('assignedCounselorId')
+          .equalTo(counselorId)
+          .get();
+      
+      List<UserModel> clients = [];
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+        values.forEach((key, value) {
+          clients.add(UserModel.fromMap(Map<String, dynamic>.from(value), key.toString()));
+        });
+      }
+      
+      return clients;
+    } catch (e) {
+      print("Error getting assigned clients: $e");
+      throw e;
+    }
+  }
+  
   Future<void> requestCounselor(String clientId) async {
     try {
       await _db.child('counselor_requests').child(clientId).set({
@@ -114,49 +141,79 @@ class RealtimeDbService {
       throw e;
     }
   }
+
+   Future<void> createCounselorRequest(String clientId) async {
+    try {
+      print("Creating counselor request for client $clientId");
+      await _db.child('counselor_requests').child(clientId).set({
+        'clientId': clientId,
+        'status': 'pending',
+        'timestamp': DateTime.now().millisecondsSinceEpoch
+      });
+      print("Counselor request created successfully");
+    } catch (e) {
+      print("Error creating counselor request: $e");
+      throw e;
+    }
+  }
   
   // Get counselor requests
-  Future<List<Map<String, dynamic>>> getCounselorRequests() async {
+   Future<List<Map<String, dynamic>>> getCounselorRequests() async {
     try {
-      DataSnapshot snapshot = await _db.child('counselor_requests')
-          .orderByChild('status')
-          .equalTo('pending')
-          .get();
+      DataSnapshot snapshot = await _db.child('counselor_requests').get();
       
-      List<Map<String, dynamic>> requests = [];
-      
-      if (snapshot.exists) {
-        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
-        values.forEach((key, value) {
-          Map<dynamic, dynamic> request = value as Map<dynamic, dynamic>;
-          // Attach client ID as key
-          request['clientId'] = key;
-          requests.add(Map<String, dynamic>.from(request));
+      if (snapshot.exists && snapshot.value != null) {
+        Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
+        List<Map<String, dynamic>> requests = [];
+        
+        data.forEach((key, value) {
+          if (value is Map) {
+            Map<String, dynamic> request = Map<String, dynamic>.from(value);
+            request['requestId'] = key.toString();
+            requests.add(request);
+          }
         });
+        
+        return requests;
+      } else {
+        return [];
       }
-      
-      return requests;
     } catch (e) {
       print("Error getting counselor requests: $e");
       throw e;
     }
   }
   
-  // Assign counselor to client
-  Future<void> assignCounselorToClient(String clientId, String counselorId) async {
+  // Check if a specific client has a counselor request
+  Future<bool> hasClientCounselorRequest(String clientId) async {
     try {
-      // Update client's assigned counselor
-      await _db.child('users').child(clientId).update({
-        'assignedCounselorId': counselorId,
-      });
-      
-      // Update the request status
-      await _db.child('counselor_requests').child(clientId).update({
-        'status': 'completed',
-        'counselorId': counselorId,
-      });
+      // Only check the specific client's request instead of loading all requests
+      DataSnapshot snapshot = await _db.child('counselor_requests').child(clientId).get();
+      return snapshot.exists;
     } catch (e) {
-      print("Error assigning counselor: $e");
+      print("Error checking client counselor request: $e");
+      return false;
+    }
+  }
+  
+  // Assign counselor to client
+  Future<void> assignCounselorToClient(String clientId, String? counselorId) async {
+    try {
+      print("Attempting to ${counselorId == null ? 'unassign counselor from' : 'assign counselor to'} client $clientId");
+      
+      Map<String, dynamic> updates = {};
+      
+      if (counselorId == null) {
+        // Remove the field completely for unassigning
+        updates['assignedCounselorId'] = null;
+      } else {
+        updates['assignedCounselorId'] = counselorId;
+      }
+      
+      await _db.child('users').child(clientId).update(updates);
+      print("Counselor ${counselorId == null ? 'unassigned' : 'assigned'} successfully");
+    } catch (e) {
+      print("Error ${counselorId == null ? 'unassigning' : 'assigning'} counselor: $e");
       throw e;
     }
   }
@@ -164,11 +221,13 @@ class RealtimeDbService {
   // Update counselor request status
   Future<void> updateCounselorRequestStatus(String clientId, String status) async {
     try {
+      print("Updating request status for client $clientId to $status");
       await _db.child('counselor_requests').child(clientId).update({
-        'status': status,
+        'status': status
       });
+      print("Request status updated successfully");
     } catch (e) {
-      print("Error updating counselor request: $e");
+      print("Error updating request status: $e");
       throw e;
     }
   }
@@ -212,6 +271,129 @@ class RealtimeDbService {
       throw e;
     }
   }
+  // Get all articles
+Future<List<ArticleModel>> getArticles() async {
+  try {
+    DataSnapshot snapshot = await _db.child('articles').get();
+    
+    List<ArticleModel> articles = [];
+    
+    if (snapshot.exists && snapshot.value != null) {
+      Map<dynamic, dynamic> categories = snapshot.value as Map<dynamic, dynamic>;
+      categories.forEach((category, categoryData) {
+        Map<dynamic, dynamic> articlesInCategory = categoryData as Map<dynamic, dynamic>;
+        articlesInCategory.forEach((key, value) {
+          Map<dynamic, dynamic> articleData = value as Map<dynamic, dynamic>;
+          // Add category and id to the map
+          Map<String, dynamic> formattedData = Map<String, dynamic>.from(articleData);
+          formattedData['category'] = category;
+          articles.add(ArticleModel.fromMap(formattedData, key.toString()));
+        });
+      });
+    }
+    
+    return articles;
+  } catch (e) {
+    print("Error getting all articles: $e");
+    throw e;
+  }
+}
+
+// Add article
+// Add article
+Future<void> addArticle(ArticleModel article) async {
+  try {
+    String category = article.category;
+    String articleId = _db.child('articles').child(category).push().key ?? DateTime.now().millisecondsSinceEpoch.toString();
+    
+    await _db.child('articles').child(category).child(articleId).set({
+      'title': article.title,
+      'content': article.content,
+      'createdAt': article.createdAt.millisecondsSinceEpoch,
+      'authorId': article.authorId,
+      'authorName': article.authorName,
+      'tags': article.tags,
+      'audience': article.audience,
+      'imageUrl': article.imageUrl,
+    });
+  } catch (e) {
+    print("Error adding article: $e");
+    rethrow;
+  }
+}
+
+// Delete article
+Future<void> deleteArticle(String articleId) async {
+  try {
+    // Since articles are stored by category, we need to find which category this article belongs to
+    DataSnapshot snapshot = await _db.child('articles').get();
+    
+    if (snapshot.exists && snapshot.value != null) {
+      Map<dynamic, dynamic> categories = snapshot.value as Map<dynamic, dynamic>;
+      
+      for (var category in categories.keys) {
+        Map<dynamic, dynamic> articlesInCategory = categories[category] as Map<dynamic, dynamic>;
+        
+        if (articlesInCategory.containsKey(articleId)) {
+          await _db.child('articles').child(category.toString()).child(articleId).remove();
+          print("Article deleted successfully");
+          return;
+        }
+      }
+      
+      throw Exception('Article not found');
+    } else {
+      throw Exception('No articles found');
+    }
+  } catch (e) {
+    print("Error deleting article: $e");
+    throw e;
+  }
+}
+  
+  // Upload study material
+  Future<void> uploadStudyMaterial(String title, String content, String category) async {
+    try {
+      String materialId = _db.child('study_materials').child(category).push().key ?? DateTime.now().millisecondsSinceEpoch.toString();
+      
+      await _db.child('study_materials').child(category).child(materialId).set({
+        'title': title,
+        'content': content,
+        'category': category,
+        'timestamp': ServerValue.timestamp,
+      });
+    } catch (e) {
+      print("Error uploading study material: $e");
+      throw e;
+    }
+  }
+  
+  // Get study materials
+  Future<List<Map<String, dynamic>>> getStudyMaterials() async {
+    try {
+      DataSnapshot snapshot = await _db.child('study_materials').get();
+      
+      List<Map<String, dynamic>> materials = [];
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> categories = snapshot.value as Map<dynamic, dynamic>;
+        categories.forEach((category, categoryData) {
+          Map<dynamic, dynamic> materialsInCategory = categoryData as Map<dynamic, dynamic>;
+          materialsInCategory.forEach((key, value) {
+            Map<dynamic, dynamic> material = value as Map<dynamic, dynamic>;
+            material['id'] = key;
+            material['category'] = category;
+            materials.add(Map<String, dynamic>.from(material));
+          });
+        });
+      }
+      
+      return materials;
+    } catch (e) {
+      print("Error getting study materials: $e");
+      throw e;
+    }
+  }
   
   // Save test result
   Future<void> saveTestResult(String userId, String testId, int score) async {
@@ -226,8 +408,48 @@ class RealtimeDbService {
     }
   }
   
-  // Add counselor comments to test result
-  Future<void> addCommentToTestResult(String clientId, String testId, String comment) async {
+  // Get test results for a user
+  Future<List<Map<String, dynamic>>> getTestResults(String userId) async {
+    try {
+      DataSnapshot snapshot = await _db.child('test_results').child(userId).get();
+      
+      List<Map<String, dynamic>> results = [];
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+        values.forEach((testId, value) {
+          Map<dynamic, dynamic> result = value as Map<dynamic, dynamic>;
+          result['testId'] = testId;
+          results.add(Map<String, dynamic>.from(result));
+        });
+      }
+      
+      return results;
+    } catch (e) {
+      print("Error getting test results: $e");
+      throw e;
+    }
+  }
+  
+  // Get client test results (for counselors)
+  Future<Map<String, dynamic>> getClientTestResults(String clientId) async {
+    try {
+      DataSnapshot snapshot = await _db.child('test_results').child(clientId).get();
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> results = snapshot.value as Map<dynamic, dynamic>;
+        return Map<String, dynamic>.from(results);
+      }
+      
+      return {};
+    } catch (e) {
+      print("Error getting client test results: $e");
+      throw e;
+    }
+  }
+  
+  // Add counselor comment to test result
+  Future<void> addTestResultComment(String clientId, String testId, String comment) async {
     try {
       await _db.child('test_results').child(clientId).child(testId).update({
         'counselorComment': comment,
@@ -249,6 +471,7 @@ class RealtimeDbService {
         'senderId': senderId,
         'text': text,
         'timestamp': ServerValue.timestamp,
+        'isRead': false,
       });
     } catch (e) {
       print("Error saving chat message: $e");
@@ -280,12 +503,39 @@ class RealtimeDbService {
     }
   }
   
+  // Mark chat messages as read
+  Future<void> markMessagesAsRead(String clientId, String counselorId, String readerId) async {
+    try {
+      String chatId = "${clientId}_${counselorId}";
+      DataSnapshot snapshot = await _db.child('chats').child(chatId)
+          .orderByChild('isRead')
+          .equalTo(false)
+          .get();
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+        values.forEach((key, value) {
+          Map<dynamic, dynamic> message = value as Map<dynamic, dynamic>;
+          if (message['senderId'] != readerId) {
+            _db.child('chats').child(chatId).child(key).update({
+              'isRead': true,
+            });
+          }
+        });
+      }
+    } catch (e) {
+      print("Error marking messages as read: $e");
+      throw e;
+    }
+  }
+  
   // Create appointment request
   Future<void> createAppointmentRequest(String clientId, String counselorId, String date, String time) async {
     try {
       String appointmentId = _db.child('appointments').child(clientId).push().key ?? DateTime.now().millisecondsSinceEpoch.toString();
       
       await _db.child('appointments').child(clientId).child(appointmentId).set({
+        'clientId': clientId,
         'counselorId': counselorId,
         'date': date,
         'time': time,
@@ -298,14 +548,102 @@ class RealtimeDbService {
     }
   }
   
+  // Get appointments for client
+  Future<List<Map<String, dynamic>>> getClientAppointments(String clientId) async {
+    try {
+      DataSnapshot snapshot = await _db.child('appointments').child(clientId).get();
+      
+      List<Map<String, dynamic>> appointments = [];
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+        values.forEach((key, value) {
+          Map<dynamic, dynamic> appointment = value as Map<dynamic, dynamic>;
+          appointment['id'] = key;
+          appointments.add(Map<String, dynamic>.from(appointment));
+        });
+      }
+      
+      return appointments;
+    } catch (e) {
+      print("Error getting client appointments: $e");
+      throw e;
+    }
+  }
+  
+  // Get appointments for counselor (across all clients)
+  Future<List<Map<String, dynamic>>> getCounselorAppointments(String counselorId) async {
+    try {
+      // Get all appointments
+      DataSnapshot snapshot = await _db.child('appointments').get();
+      List<Map<String, dynamic>> appointments = [];
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> clientAppointments = snapshot.value as Map<dynamic, dynamic>;
+        
+        // Loop through each client's appointments
+        clientAppointments.forEach((clientId, clientAppts) {
+          Map<dynamic, dynamic> appts = clientAppts as Map<dynamic, dynamic>;
+          
+          // Loop through each appointment for this client
+          appts.forEach((appointmentId, appointmentData) {
+            Map<dynamic, dynamic> appointment = appointmentData as Map<dynamic, dynamic>;
+            
+            // Check if this appointment is for the specified counselor
+            if (appointment['counselorId'] == counselorId) {
+              appointment['id'] = appointmentId;
+              appointment['clientId'] = clientId;
+              appointments.add(Map<String, dynamic>.from(appointment));
+            }
+          });
+        });
+      }
+      
+      return appointments;
+    } catch (e) {
+      print("Error getting counselor appointments: $e");
+      throw e;
+    }
+  }
+  
   // Update appointment status
-  Future<void> updateAppointmentStatus(String clientId, String appointmentId, String status) async {
+  Future<void> updateAppointmentStatus(String appointmentId, String clientId, String status) async {
     try {
       await _db.child('appointments').child(clientId).child(appointmentId).update({
         'status': status,
       });
     } catch (e) {
       print("Error updating appointment status: $e");
+      throw e;
+    }
+  }
+  
+  // Create test on Firebase
+  Future<void> createTest(TestModel test) async {
+    try {
+      await _db.child('tests').child(test.id).set(test.toMap());
+    } catch (e) {
+      print("Error creating test: $e");
+      throw e;
+    }
+  }
+  
+  // Get all tests
+  Future<List<TestModel>> getAllTests() async {
+    try {
+      DataSnapshot snapshot = await _db.child('tests').get();
+      List<TestModel> tests = [];
+      
+      if (snapshot.exists) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+        values.forEach((key, value) {
+          tests.add(TestModel.fromMap(Map<String, dynamic>.from(value), key.toString()));
+        });
+      }
+      
+      return tests;
+    } catch (e) {
+      print("Error getting tests: $e");
       throw e;
     }
   }

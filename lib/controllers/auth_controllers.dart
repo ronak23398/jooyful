@@ -31,9 +31,16 @@ class AuthController extends GetxController {
       try {
         isLoading.value = true;
         userModel.value = await _dbService.getUserData(user.uid);
-        _navigateBasedOnRole();
+        // Only navigate if user model is not null
+        if (userModel.value != null) {
+          _navigateBasedOnRole();
+        } else {
+          // Handle case where user exists in Auth but not in Realtime DB
+          Get.snackbar('Error', 'User profile not found');
+          await _authService.signOut(); // Sign out and return to login
+        }
       } catch (e) {
-        Get.snackbar('Error', 'Failed to load user data');
+        Get.snackbar('Error', 'Failed to load user data: ${e.toString()}');
       } finally {
         isLoading.value = false;
       }
@@ -41,7 +48,14 @@ class AuthController extends GetxController {
   }
 
   void _navigateBasedOnRole() {
-    switch (userModel.value?.role) {
+    // Add null check to prevent null pointer exception
+    if (userModel.value == null) {
+      Get.offAllNamed(AppRoutes.LOGIN);
+      return;
+    }
+    
+    final role = userModel.value?.role;
+    switch (role) {
       case 'owner':
         Get.offAllNamed(AppRoutes.OWNER_HOME);
         break;
@@ -55,64 +69,68 @@ class AuthController extends GetxController {
         Get.offAllNamed(AppRoutes.INTERN_HOME);
         break;
       default:
-        // Role not set yet, stay on login
+        // Role not set or invalid, stay on login
         Get.offAllNamed(AppRoutes.LOGIN);
     }
   }
 
   // Sign up with email
   Future<void> signup(String name, String email, String password) async {
-  try {
-    isLoading.value = true;
-    
-    // 1. First create the auth user
-    User? user = await _authService.signUp(email, password);
-    
-    if (user != null) {
-      print("Firebase Auth user created with UID: ${user.uid}");
+    try {
+      isLoading.value = true;
       
-      // 2. Create user model
-      UserModel newUser = UserModel(
-        uid: user.uid,
-        name: name,
-        email: email,
-        role: selectedRole.value,
-      );
+      // 1. First create the auth user
+      User? user = await _authService.signUp(email, password);
       
-      print("About to save user to Realtime DB: ${newUser.toJson()}");
-      
-      // 3. Save to database - THIS is where the issue likely is
-      try {
-        await _dbService.createUser(newUser);
-        print("User successfully saved to Realtime DB");
-      } catch (dbError) {
-        print("Database error: $dbError");
-        // If DB save fails, you might want to delete the auth user
-        // to maintain consistency
-        await user.delete();
-        throw dbError;
+      if (user != null) {
+        print("Firebase Auth user created with UID: ${user.uid}");
+        
+        // 2. Create user model with current timestamp for createdAt
+        UserModel newUser = UserModel(
+          uid: user.uid,
+          name: name,
+          email: email,
+          role: selectedRole.value,
+          createdAt: DateTime.now(),
+        );
+        
+        print("About to save user to Realtime DB: ${newUser.toMap()}");
+        
+        // 3. Save to database
+        try {
+          await _dbService.createUser(newUser);
+          print("User successfully saved to Realtime DB");
+          
+          // 4. Set user model
+          userModel.value = newUser;
+          
+          Get.snackbar('Success', 'Account created successfully');
+          
+          // Explicitly navigate based on role instead of waiting for the auth stream
+          _navigateBasedOnRole();
+        } catch (dbError) {
+          print("Database error: $dbError");
+          // If DB save fails, delete the auth user to maintain consistency
+          await user.delete();
+          throw dbError;
+        }
+      } else {
+        throw Exception("Failed to create user account");
       }
-      
-      // 4. Set user model
-      userModel.value = newUser;
-      
-      Get.snackbar('Success', 'Account created successfully');
-      _navigateBasedOnRole();
+    } catch (e) {
+      print("Signup error: $e");
+      Get.snackbar('Error', 'Failed to create account: ${e.toString()}');
+    } finally {
+      isLoading.value = false;
     }
-  } catch (e) {
-    print("Signup error: $e");
-    Get.snackbar('Error', 'Failed to create account: ${e.toString()}');
-  } finally {
-    isLoading.value = false;
   }
-}
 
   // Login with email
   Future<void> login(String email, String password) async {
     try {
       isLoading.value = true;
       await _authService.signIn(email, password);
-      // _setInitialScreen will handle navigation
+      // _setInitialScreen will handle navigation via the auth state stream
     } catch (e) {
       Get.snackbar('Error', 'Failed to login: ${e.toString()}');
       isLoading.value = false;
