@@ -1,9 +1,11 @@
+
+
 import 'package:get/get.dart';
+import 'package:jooyful_heaven/models/appointment_model.dart';
+import 'package:jooyful_heaven/models/chat_model.dart';
+import 'package:jooyful_heaven/models/user_model.dart';
+import 'package:jooyful_heaven/services/firebase_auth_service.dart';
 import 'package:jooyful_heaven/services/realtime_db_service.dart';
-import '../models/user_model.dart';
-import '../models/appointment_model.dart';
-import '../models/chat_model.dart';
-import '../services/firebase_auth_service.dart';
 
 class CounselorController extends GetxController {
   final FirebaseAuthService authService;
@@ -27,29 +29,29 @@ class CounselorController extends GetxController {
     fetchAppointments();
   }
 
- Future<void> fetchAssignedClients() async {
-  try {
-    isLoading.value = true;
-    
-    // Get current counselor ID
-    final counselorId = authService.currentUser?.uid;
-    if (counselorId == null) return;
-    
-    // Query users where assignedCounselorId equals current counselor ID
-    final clients = await dbService.getWhere('users', 'assignedCounselorId', counselorId);
-    
-    // Convert to UserModel objects
-    assignedClients.value = clients.map((clientData) {
-      Map<String, dynamic> data = clientData as Map<String, dynamic>;
-      return UserModel.fromMap(data);
-    }).toList();
-    
-  } catch (e) {
-    Get.snackbar('Error', 'Failed to load clients: ${e.toString()}');
-  } finally {
-    isLoading.value = false;
+  Future<void> fetchAssignedClients() async {
+    try {
+      isLoading.value = true;
+      
+      // Get current counselor ID
+      final counselorId = authService.currentUser?.uid;
+      if (counselorId == null) return;
+      
+      // Fetch all users where assignedCounselorId equals current counselor ID
+      final clients = await dbService.getWhere('users', 'assignedCounselorId', counselorId);
+      
+      // Convert to UserModel objects
+      assignedClients.value = clients.map((clientData) {
+  Map<String, dynamic> data = clientData as Map<String, dynamic>;
+  return UserModel.fromMap(data, );
+}).toList();
+      
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to load clients: ${e.toString()}');
+    } finally {
+      isLoading.value = false;
+    }
   }
-}
 
   Future<void> fetchAppointments() async {
     try {

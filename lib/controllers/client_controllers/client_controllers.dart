@@ -1,7 +1,9 @@
+
+
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
-import '../models/user_model.dart';
-import '../services/realtime_db_service.dart';
+import 'package:jooyful_heaven/models/user_model.dart';
+import 'package:jooyful_heaven/services/realtime_db_service.dart';
 
 class ClientController extends GetxController {
   final RealtimeDbService _dbService = RealtimeDbService();

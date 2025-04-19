@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:jooyful_heaven/controllers/counsellor_controller.dart';
+import 'package:jooyful_heaven/controllers/counsellor/counsellor_controller.dart';
 import 'package:jooyful_heaven/models/user_model.dart';
 
 class MyClientsScreen extends StatelessWidget {

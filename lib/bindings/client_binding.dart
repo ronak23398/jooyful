@@ -1,7 +1,9 @@
+
+
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
-import 'package:jooyful_heaven/controllers/client_controllers.dart';
-import '../services/realtime_db_service.dart';
+import 'package:jooyful_heaven/controllers/client_controllers/client_controllers.dart';
+import 'package:jooyful_heaven/services/realtime_db_service.dart';
 
 class ClientBinding implements Bindings {
   @override

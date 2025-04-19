@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
-import 'package:jooyful_heaven/controllers/counsellor_controller.dart';
+import 'package:jooyful_heaven/controllers/counsellor/counsellor_controller.dart';
 import 'package:jooyful_heaven/models/appointment_model.dart';
 
 class CounselorHomeScreen extends StatelessWidget {

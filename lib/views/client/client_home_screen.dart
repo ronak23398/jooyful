@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
-import 'package:jooyful_heaven/controllers/client_controllers.dart';
+import 'package:jooyful_heaven/controllers/client_controllers/client_controllers.dart';
 import '../../routes/app_routes.dart';
 
 class ClientHomeScreen extends GetView<ClientController> {
@@ -216,139 +216,142 @@ class ClientHomeScreen extends GetView<ClientController> {
     );
   }
   
-  Widget _buildCounselorSection() {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.psychology_alt, color: Colors.blue),
-                SizedBox(width: 8),
-                Text(
-                  'Your Counselor',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            if (controller.assignedCounselorId.value.isNotEmpty && controller.counselor.value != null)
-              // Counselor is assigned
-              Column(
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 25,
-                        backgroundColor: Colors.blue.shade100,
-                        child: Icon(Icons.person, color: Colors.blue),
-                      ),
-                      SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              controller.counselor.value!.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text('Professional Counselor'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-                  Row(
-                    children: [
-                      // Expanded(
-                      //   child: ElevatedButton.icon(
-                      //     icon: Icon(Icons.chat),
-                      //     label: Text('Chat'),
-                      //     style: ElevatedButton.styleFrom(
-                      //       backgroundColor: Colors.blue,
-                      //       foregroundColor: Colors.white,
-                      //     ),
-                      //     onPressed: () => Get.toNamed(AppRoutes.CHAT_SCREEN),
-                      //   ),
-                      // ),
-                      // SizedBox(width: 8),
-                      // Expanded(
-                      //   child: ElevatedButton.icon(
-                      //     icon: Icon(Icons.calendar_today),
-                      //     label: Text('Appointment'),
-                      //     style: ElevatedButton.styleFrom(
-                      //       backgroundColor: Colors.green,
-                      //       foregroundColor: Colors.white,
-                      //     ),
-                      //     onPressed: () => Get.toNamed(AppRoutes.REQUEST_APPOINTMENT_SCREEN),
-                      //   ),
-                      // ),
-                    ],
-                  ),
-                ],
-              )
-            else if (controller.hasCounselorRequest.value)
-              // Request is pending
-              Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.hourglass_top, size: 40, color: Colors.amber),
-                    SizedBox(height: 8),
-                    Text(
-                      'Counselor request is pending',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.amber.shade800,
-                      ),
-                    ),
-                    Text(
-                      'We will assign you a counselor soon',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              // No counselor yet
-              Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.person_add, size: 40, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text(
-                      'No counselor assigned yet',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => controller.requestCounselor(),
-                      child: Text('Request a Counselor'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
+ Widget _buildCounselorSection() {
+  return Card(
+    elevation: 2,
+    child: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.psychology_alt, color: Colors.blue),
+              SizedBox(width: 8),
+              Text(
+                'Your Counselor',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-          ],
-        ),
+            ],
+          ),
+          SizedBox(height: 16),
+          if (controller.assignedCounselorId.value.isNotEmpty && controller.counselor.value != null)
+            // Counselor is assigned
+            Column(
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 25,
+                      backgroundColor: Colors.blue.shade100,
+                      child: Icon(Icons.person, color: Colors.blue),
+                    ),
+                    SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            controller.counselor.value!.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text('Professional Counselor'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: Icon(Icons.chat),
+                        label: Text('Chat'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () => Get.toNamed(
+                          AppRoutes.CHAT_SCREEN,
+                          arguments: {'counselorId': controller.assignedCounselorId.value}
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: Icon(Icons.calendar_today),
+                        label: Text('Appointment'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: (){},
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            )
+          else if (controller.hasCounselorRequest.value)
+            // Request is pending
+            Center(
+              child: Column(
+                children: [
+                  Icon(Icons.hourglass_top, size: 40, color: Colors.amber),
+                  SizedBox(height: 8),
+                  Text(
+                    'Counselor request is pending',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.amber.shade800,
+                    ),
+                  ),
+                  Text(
+                    'We will assign you a counselor soon',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            // No counselor yet
+            Center(
+              child: Column(
+                children: [
+                  Icon(Icons.person_add, size: 40, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text(
+                    'No counselor assigned yet',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => controller.requestCounselor(),
+                    child: Text('Request a Counselor'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
   
   Widget _buildTestsSection() {
     return Column(
