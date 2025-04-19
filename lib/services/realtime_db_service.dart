@@ -6,6 +6,8 @@ import '../models/test_model.dart';
 class RealtimeDbService {
   late final DatabaseReference _db;
   
+  final FirebaseDatabase _database = FirebaseDatabase.instance;
+  
   RealtimeDbService() {
     // Initialize with the correct region URL
     FirebaseDatabase database = FirebaseDatabase.instance;
@@ -34,7 +36,7 @@ class RealtimeDbService {
       
       if (snapshot.exists) {
         Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
-        return UserModel.fromMap(Map<String, dynamic>.from(data), uid);
+        return UserModel.fromMap(Map<String, dynamic>.from(data), );
       } else {
         throw Exception('User not found');
       }
@@ -55,7 +57,7 @@ class RealtimeDbService {
         
         data.forEach((key, value) {
           if (value is Map) {
-            users.add(UserModel.fromMap(Map<String, dynamic>.from(value), key.toString()));
+            users.add(UserModel.fromMap(Map<String, dynamic>.from(value), ));
           }
         });
         
@@ -94,7 +96,7 @@ class RealtimeDbService {
       if (snapshot.exists) {
         Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
         values.forEach((key, value) {
-          users.add(UserModel.fromMap(Map<String, dynamic>.from(value), key.toString()));
+          users.add(UserModel.fromMap(Map<String, dynamic>.from(value), ));
         });
       }
       
@@ -118,7 +120,7 @@ class RealtimeDbService {
       if (snapshot.exists) {
         Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
         values.forEach((key, value) {
-          clients.add(UserModel.fromMap(Map<String, dynamic>.from(value), key.toString()));
+          clients.add(UserModel.fromMap(Map<String, dynamic>.from(value), ));
         });
       }
       
@@ -663,4 +665,101 @@ Future<void> deleteArticle(String articleId) async {
       return false;
     }
   }
+  // Get data at a specific path
+  Future<dynamic> get(String path) async {
+    try {
+      final reference = _database.ref(path);
+      final snapshot = await reference.get();
+      return snapshot.value;
+    } catch (e) {
+      throw Exception('Failed to get data: $e');
+    }
+  }
+
+  // Set data at a specific path
+  Future<void> set(String path, dynamic data) async {
+    try {
+      final reference = _database.ref(path);
+      await reference.set(data);
+    } catch (e) {
+      throw Exception('Failed to set data: $e');
+    }
+  }
+
+  // Update specific fields at a path
+  Future<void> update(String path, Map<String, dynamic> data) async {
+    try {
+      final reference = _database.ref(path);
+      await reference.update(data);
+    } catch (e) {
+      throw Exception('Failed to update data: $e');
+    }
+  }
+
+  // Delete data at a specific path
+  Future<void> delete(String path) async {
+    try {
+      final reference = _database.ref(path);
+      await reference.remove();
+    } catch (e) {
+      throw Exception('Failed to delete data: $e');
+    }
+  }
+
+  // Query data where a field equals a specific value
+  Future<List<dynamic>> getWhere(String path, String field, dynamic value) async {
+    try {
+      final reference = _database.ref(path);
+      final query = reference.orderByChild(field).equalTo(value);
+      final snapshot = await query.get();
+      
+      if (snapshot.value == null) return [];
+      
+      final resultMap = snapshot.value as Map<dynamic, dynamic>;
+      final results = <dynamic>[];
+      
+      resultMap.forEach((key, value) {
+        if (value is Map) {
+          // Add the key as part of the data
+          final data = Map<String, dynamic>.from(value as Map);
+          data['id'] = key;
+          results.add(data);
+        }
+      });
+      
+      return results;
+    } catch (e) {
+      throw Exception('Failed to query data: $e');
+    }
+  }
+
+  // Listen for changes at a specific path
+  Stream<DatabaseEvent> listenToPath(String path) {
+    final reference = _database.ref(path);
+    return reference.onValue;
+  }
+  
+  // Listen for child added events at a specific path
+  Stream<DatabaseEvent> listenToChildAdded(String path) {
+    final reference = _database.ref(path);
+    return reference.onChildAdded;
+  }
+  
+  // Listen for child changed events at a specific path
+  Stream<DatabaseEvent> listenToChildChanged(String path) {
+    final reference = _database.ref(path);
+    return reference.onChildChanged;
+  }
+  
+  // Add a new item with an auto-generated key
+  Future<String> push(String path, dynamic data) async {
+    try {
+      final reference = _database.ref(path).push();
+      await reference.set(data);
+      return reference.key ?? '';
+    } catch (e) {
+      throw Exception('Failed to push data: $e');
+    }
+  }
+
 }

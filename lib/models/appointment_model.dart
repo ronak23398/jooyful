@@ -1,44 +1,57 @@
 class AppointmentModel {
   final String id;
   final String clientId;
-  final String counselorId;
-  final DateTime date;
+  final String clientName;
+  final String date;
   final String time;
-  final String status; // pending, confirmed, cancelled
-  final String? notes;
-  
+  final String status; // pending, accepted, declined, completed
+
   AppointmentModel({
     required this.id,
     required this.clientId,
-    required this.counselorId,
+    required this.clientName,
     required this.date,
     required this.time,
     required this.status,
-    this.notes,
   });
-  
-  factory AppointmentModel.fromMap(Map<String, dynamic> map, String id) {
+
+  factory AppointmentModel.fromJson(Map<String, dynamic> json) {
     return AppointmentModel(
-      id: id,
-      clientId: map['clientId'] ?? '',
-      counselorId: map['counselorId'] ?? '',
-      date: map['date'] != null 
-        ? DateTime.parse(map['date'])
-        : DateTime.now(),
-      time: map['time'] ?? '',
-      status: map['status'] ?? 'pending',
-      notes: map['notes'],
+      id: json['id'] ?? '',
+      clientId: json['clientId'] ?? '',
+      clientName: json['clientName'] ?? '',
+      date: json['date'] ?? '',
+      time: json['time'] ?? '',
+      status: json['status'] ?? 'pending',
     );
   }
-  
-  Map<String, dynamic> toMap() {
+
+  Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'clientId': clientId,
-      'counselorId': counselorId,
-      'date': date.toString().substring(0, 10), // YYYY-MM-DD
+      'clientName': clientName,
+      'date': date,
       'time': time,
       'status': status,
-      'notes': notes,
     };
+  }
+
+  AppointmentModel copyWith({
+    String? id,
+    String? clientId,
+    String? clientName,
+    String? date,
+    String? time,
+    String? status,
+  }) {
+    return AppointmentModel(
+      id: id ?? this.id,
+      clientId: clientId ?? this.clientId,
+      clientName: clientName ?? this.clientName,
+      date: date ?? this.date,
+      time: time ?? this.time,
+      status: status ?? this.status,
+    );
   }
 }

@@ -1,9 +1,17 @@
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/bindings/auth_binding.dart';
 import 'package:jooyful_heaven/bindings/client_binding.dart';
+import 'package:jooyful_heaven/bindings/counsellor_binding.dart';
 import 'package:jooyful_heaven/bindings/owner_binding.dart';
+import 'package:jooyful_heaven/controllers/counsellor_controller.dart';
 import 'package:jooyful_heaven/controllers/owner_controller.dart';
+import 'package:jooyful_heaven/services/firebase_auth_service.dart';
+import 'package:jooyful_heaven/services/realtime_db_service.dart';
 import 'package:jooyful_heaven/views/client/client_home_screen.dart';
+import 'package:jooyful_heaven/views/counsellor/counsellor_appointment_screen.dart';
+import 'package:jooyful_heaven/views/counsellor/counsellor_chat_screen.dart';
+import 'package:jooyful_heaven/views/counsellor/counsellor_home_screen.dart';
+import 'package:jooyful_heaven/views/counsellor/list_of_clients_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_clients_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_counsellors_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_interns_screen.dart';
@@ -29,7 +37,12 @@ class AppRoutes {
   static const ASSIGN_COUNSELOR = '/assign_counselor';
   static const UPLOAD_ARTICLE = '/upload_article';
   static const TEST_SCREEN = '/TEST_SCREEN';
-  // ... add all the routes from your plan
+  
+  // New routes from CounselorHomeScreen
+  static const LIST_OF_CLIENTS = '/listofClients';
+  static const COUNSELOR_VIEW_APPOINTMENTS = '/counselor/appointments';
+  static const UPCOMING_APPOINTMENTS = '/upcoming_appointments';
+  static const COUNSELLOR_CHAT = '/ucounselor/chat';
 }
 
 // Define pages with bindings
@@ -94,11 +107,51 @@ final appPages = [
         Get.lazyPut<OwnerController>(() => OwnerController());
       }),
     ),
-  // GetPage(
-  //   name: AppRoutes.COUNSELOR_HOME,
-  //   page: () => CounselorHomeScreen(),
-  //   binding: CounselorBinding(),
-  // ),
+  GetPage(
+    name: AppRoutes.COUNSELOR_HOME,
+    page: () => CounselorHomeScreen(),
+    binding: CounselorBinding(),
+  ),
+   GetPage(
+  name: AppRoutes.LIST_OF_CLIENTS,
+  page: () => MyClientsScreen(), // You'll need to create this screen
+  binding: BindingsBuilder(() {
+    Get.lazyPut<CounselorController>(() => CounselorController(
+      authService: Get.find<FirebaseAuthService>(),
+      dbService: Get.find<RealtimeDbService>(),
+    ));
+  }),
+),
+GetPage(
+  name: AppRoutes.COUNSELOR_VIEW_APPOINTMENTS,
+  page: () => ViewAppointmentsScreen(), // You'll need to create this screen
+  binding: BindingsBuilder(() {
+    Get.lazyPut<CounselorController>(() => CounselorController(
+      authService: Get.find<FirebaseAuthService>(),
+      dbService: Get.find<RealtimeDbService>(),
+    ));
+  }),
+),
+GetPage(
+  name: AppRoutes.UPCOMING_APPOINTMENTS,
+  page: () => ViewAppointmentsScreen(), // You'll need to create this screen
+  binding: BindingsBuilder(() {
+    Get.lazyPut<CounselorController>(() => CounselorController(
+      authService: Get.find<FirebaseAuthService>(),
+      dbService: Get.find<RealtimeDbService>(),
+    ));
+  }),
+),
+GetPage(
+  name: AppRoutes.COUNSELLOR_CHAT,
+  page: () => ChatWithClientScreen(), // You'll need to create this screen
+  binding: BindingsBuilder(() {
+    Get.lazyPut<CounselorController>(() => CounselorController(
+      authService: Get.find<FirebaseAuthService>(),
+      dbService: Get.find<RealtimeDbService>(),
+    ));
+  }),
+),
   // GetPage(
   //   name: AppRoutes.INTERN_HOME,
   //   page: () => InternHomeScreen(),

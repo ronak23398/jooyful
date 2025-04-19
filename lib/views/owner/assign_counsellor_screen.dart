@@ -117,29 +117,55 @@ class AssignCounselorScreen extends GetView<OwnerController> {
             border: Border.all(color: Colors.grey.shade300),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: controller.counselors.length > 3 ? 3 : controller.counselors.length,
-            itemBuilder: (context, index) {
-              final counselor = controller.counselors[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.orange.shade100,
-                  child: const Icon(Icons.medical_services, color: Colors.orange),
-                ),
-                title: Text(counselor.name),
-                subtitle: Text(counselor.email),
-                trailing: ElevatedButton(
-                  onPressed: () => _assignCounselor(clientId, counselor.uid),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
+          child: Column(
+            children: List.generate(
+              controller.counselors.length > 3 ? 3 : controller.counselors.length,
+              (index) {
+                final counselor = controller.counselors[index];
+                // Replace the ListTile with a custom Row to avoid the width constraint issues
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                  child: Row(
+                    children: [
+                      // Leading - Avatar
+                      CircleAvatar(
+                        backgroundColor: Colors.orange.shade100,
+                        child: const Icon(Icons.medical_services, color: Colors.orange),
+                      ),
+                      const SizedBox(width: 16),
+                      // Title and subtitle - Expanded to take remaining space
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              counselor.name,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              counselor.email,
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Trailing - Button
+                      SizedBox(
+                        width: 80, // Fixed width for the button
+                        child: ElevatedButton(
+                          onPressed: () => _assignCounselor(clientId, counselor.uid),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Assign'),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('Assign'),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
         if (controller.counselors.length > 3)
@@ -199,23 +225,46 @@ class AssignCounselorScreen extends GetView<OwnerController> {
                   itemCount: controller.counselors.length,
                   itemBuilder: (context, index) {
                     final counselor = controller.counselors[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.orange.shade100,
-                        child: const Icon(Icons.medical_services, color: Colors.orange),
-                      ),
-                      title: Text(counselor.name),
-                      subtitle: Text(counselor.email),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          Get.back();
-                          _assignCounselor(clientId, counselor.uid);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text('Assign'),
+                    // Also fix the ListTile in the dialog with the same approach
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.orange.shade100,
+                            child: const Icon(Icons.medical_services, color: Colors.orange),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  counselor.name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  counselor.email,
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Get.back();
+                                _assignCounselor(clientId, counselor.uid);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Assign'),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },

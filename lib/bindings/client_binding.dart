@@ -28,4 +28,6 @@ class ClientBinding implements Bindings {
       fenix: true,
     );
   }
+
+  
 }
