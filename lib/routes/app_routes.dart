@@ -148,19 +148,15 @@ GetPage(
 ),
 GetPage(
   name: AppRoutes.COUNSELLOR_CHAT,
-  page: () => CounselorChatScreen(), 
+  page: () => CounselorChatScreen(),
   binding: BindingsBuilder(() {
-    Get.lazyPut<CounselorController>(() => CounselorController(
-      authService: Get.find<FirebaseAuthService>(),
-      dbService: Get.find<RealtimeDbService>(),
-    ));
-    // Add this line to register the CounselorChatController
-    Get.lazyPut<CounselorChatController>(() => CounselorChatController());
+    // Use put() instead of lazyPut() to ensure immediate initialization
+    Get.put(CounselorChatController());
   }),
 ),
 GetPage(
       name: AppRoutes.CHAT_SCREEN,
-      page: () => ChatScreen(),
+      page: () => ClientChatScreen(),
       binding: BindingsBuilder(() {
         Get.lazyPut<ChatController>(() => ChatController());
       }),

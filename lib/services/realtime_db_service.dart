@@ -1,7 +1,25 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:jooyful_heaven/models/article_model.dart';
 import '../models/user_model.dart';
 import '../models/test_model.dart';
+
+Future<Map<String, dynamic>> processUnreadMessagesInIsolate(Map<String, dynamic> params) async {
+  final Map<dynamic, dynamic> values = params['values'];
+  final String readerId = params['readerId'];
+  
+  Map<String, dynamic> updates = {};
+  values.forEach((key, value) {
+    // Skip participants node
+    if (key == 'participants') return;
+    
+    if (value is Map && value['senderId'] != readerId) {
+      updates[key.toString()] = true;
+    }
+  });
+  
+  return updates;
+}
 
 class RealtimeDbService {
   late final DatabaseReference _db;
@@ -544,68 +562,100 @@ class RealtimeDbService {
 
   // Get chat messages
   Future<List<Map<String, dynamic>>> getChatMessages(
-    String clientId,
-    String counselorId,
-  ) async {
-    try {
-      String chatId = "${clientId}_${counselorId}";
-      DataSnapshot snapshot =
-          await _db
-              .child('chats')
-              .child(chatId)
-              .orderByChild('timestamp')
-              .get();
-
-      List<Map<String, dynamic>> messages = [];
-
-      if (snapshot.exists) {
-        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
-        values.forEach((key, value) {
-          Map<dynamic, dynamic> message = value as Map<dynamic, dynamic>;
-          message['id'] = key;
-          messages.add(Map<String, dynamic>.from(message));
-        });
+  String clientId,
+  String counselorId, {
+  int limit = 30,  // Load 30 messages at a time
+  String? lastMessageKey,
+}) async {
+  try {
+    String chatId = "${clientId}_${counselorId}";
+    Query query = _db
+        .child('chats')
+        .child(chatId)
+        .orderByChild('timestamp');
+    
+    // Add pagination
+    if (lastMessageKey != null) {
+      DataSnapshot keySnapshot = await _db
+          .child('chats')
+          .child(chatId)
+          .child(lastMessageKey)
+          .get();
+      if (keySnapshot.exists && keySnapshot.value is Map) {
+        int lastTimestamp = (keySnapshot.value as Map)['timestamp'] ?? 0;
+        query = query.endAt(lastTimestamp);
       }
-
-      return messages;
-    } catch (e) {
-      print("Error getting chat messages: $e");
-      throw e;
     }
+    
+    query = query.limitToLast(limit);
+    DataSnapshot snapshot = await query.get();
+    
+    List<Map<String, dynamic>> messages = [];
+    
+    if (snapshot.exists && snapshot.value is Map) {
+      Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+      values.forEach((key, value) {
+        // Skip participants node
+        if (key == 'participants') return;
+        
+        if (value is Map) {
+          Map<dynamic, dynamic> message = value;
+          messages.add({
+            'id': key,
+            ...Map<String, dynamic>.from(message),
+          });
+        }
+      });
+    }
+    
+    return messages;
+  } catch (e) {
+    print("Error getting chat messages: $e");
+    throw e;
   }
+}
 
   // Mark chat messages as read
-  Future<void> markMessagesAsRead(
-    String clientId,
-    String counselorId,
-    String readerId,
-  ) async {
-    try {
-      String chatId = "${clientId}_${counselorId}";
-      DataSnapshot snapshot =
-          await _db
-              .child('chats')
-              .child(chatId)
-              .orderByChild('isRead')
-              .equalTo(false)
-              .get();
-
-      if (snapshot.exists) {
-        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
-        values.forEach((key, value) {
-          Map<dynamic, dynamic> message = value as Map<dynamic, dynamic>;
-          if (message['senderId'] != readerId) {
-            _db.child('chats').child(chatId).child(key).update({
-              'isRead': true,
-            });
-          }
-        });
+ Future<void> markMessagesAsRead(
+  String clientId,
+  String counselorId,
+  String readerId,
+) async {
+  try {
+    String chatId = "${clientId}_${counselorId}";
+    
+    // First get unread messages
+    DataSnapshot snapshot = await _db
+        .child('chats')
+        .child(chatId)
+        .orderByChild('isRead')
+        .equalTo(false)
+        .get();
+    
+    if (snapshot.exists && snapshot.value is Map) {
+      Map values = snapshot.value as Map;
+      
+      // Process which messages need updates in isolate
+      final updates = await compute(
+        processUnreadMessagesInIsolate, 
+        {'values': values, 'readerId': readerId}
+      );
+      
+      // Apply all updates in one operation on main thread
+      final Map<String, dynamic> dbUpdates = {};
+      updates.forEach((key, value) {
+        dbUpdates['/chats/$chatId/$key/isRead'] = true;
+      });
+      
+      if (dbUpdates.isNotEmpty) {
+        await _db.update(dbUpdates);
       }
-    } catch (e) {
-      print("Error marking messages as read: $e");
-      throw e;
     }
+  } catch (e) {
+    print("Error marking messages as read: $e");
+    throw e;
   }
+}
 
   // Create appointment request
   Future<void> createAppointmentRequest(

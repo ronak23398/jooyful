@@ -21,8 +21,8 @@ class ChatModel {
       senderId: map['senderId'] ?? '',
       receiverId: map['receiverId'] ?? '',
       text: map['text'] ?? '',
-      timestamp: map['timestamp'] != null 
-        ? DateTime.fromMillisecondsSinceEpoch(map['timestamp'])
+      timestamp: map['timestamp'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(map['timestamp'] is int ? map['timestamp'] : int.parse(map['timestamp'].toString()))
         : DateTime.now(),
       isRead: map['isRead'] ?? false,
     );
@@ -36,5 +36,24 @@ class ChatModel {
       'timestamp': timestamp.millisecondsSinceEpoch,
       'isRead': isRead,
     };
+  }
+  
+  // Add this for isolate serialization
+  ChatModel copyWith({
+    String? id,
+    String? senderId,
+    String? receiverId,
+    String? text,
+    DateTime? timestamp,
+    bool? isRead,
+  }) {
+    return ChatModel(
+      id: id ?? this.id,
+      senderId: senderId ?? this.senderId,
+      receiverId: receiverId ?? this.receiverId,
+      text: text ?? this.text,
+      timestamp: timestamp ?? this.timestamp,
+      isRead: isRead ?? this.isRead,
+    );
   }
 }

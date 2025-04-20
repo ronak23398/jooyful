@@ -5,7 +5,7 @@ import 'package:jooyful_heaven/controllers/client_controllers/client_chat_contro
 import 'package:jooyful_heaven/models/chat_model.dart';
 import 'package:intl/intl.dart'; 
 
-class ChatScreen extends GetView<ChatController> {
+class ClientChatScreen extends GetView<ChatController> {
   final AuthController authController = Get.find<AuthController>();
   
   @override

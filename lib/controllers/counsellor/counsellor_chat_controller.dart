@@ -1,12 +1,52 @@
 import 'dart:async';
 
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../models/chat_model.dart';
 import '../../services/realtime_db_service.dart';
 import '../../models/user_model.dart';
 import '../auth_controllers.dart';
+
+// Top-level function to be run in isolate
+Future<List<ChatModel>> processMessagesInIsolate(Map<String, dynamic> params) async {
+  final List<Map<String, dynamic>> messagesData = params['messagesData'];
+  
+  return messagesData
+      .where((map) => map['id'] != null) // Filter out potential invalid entries
+      .map((map) => ChatModel.fromMap(map, map['id'] ?? ''))
+      .toList();
+}
+
+Future<ChatModel?> processNewMessageInIsolate(Map<String, dynamic> params) async {
+  final Map<dynamic, dynamic> data = params['data'];
+  final String messageId = params['messageId'];
+  
+  try {
+    if (data == null) return null;
+    
+    Map<String, dynamic> messageData = {};
+    data.forEach((key, val) {
+      messageData[key.toString()] = val;
+    });
+    
+    messageData['id'] = messageId;
+    return ChatModel.fromMap(messageData, messageData['id'] ?? '');
+  } catch (e) {
+    print('Error processing message in isolate: $e');
+    return null;
+  }
+}
+
+// Helper function to spawn isolate
+Future<List<ChatModel>> processMessagesWithIsolate(List<Map<String, dynamic>> messagesData) async {
+  final response = await compute(
+    processMessagesInIsolate, 
+    {'messagesData': messagesData}
+  );
+  return response;
+}
 
 class CounselorChatController extends GetxController {
   final RealtimeDbService _dbService = RealtimeDbService();
@@ -27,30 +67,28 @@ class CounselorChatController extends GetxController {
   String? _clientId;
   StreamSubscription? _chatSubscription;
   
-  @override
+@override
 void onInit() {
   super.onInit();
+  
+  // Debug what arguments are being received
+  print("Arguments received: ${Get.arguments}");
+  
   _counselorId = _authController.userModel.value?.uid;
   _clientId = Get.arguments?['clientId'];
   
+  print("ClientId: $_clientId");
+  print("CounselorId: $_counselorId");
+  
   if (_counselorId != null && _clientId != null) {
-    // Essential data first
     loadChatMessages();
-    
-    // Delay non-critical operations
-    Future.delayed(Duration(milliseconds: 200), () {
-      loadClientData();
-      setupMessageListener();
-    });
-    
-    Future.delayed(Duration(milliseconds: 500), () {
-      loadClientTestResults();
-      loadSessionNotes();
-      checkClientStatus();
-    });
+    loadClientData();
+    setupMessageListener();
+    loadClientTestResults();
+    loadSessionNotes();
+    checkClientStatus();
   } else {
-    Get.snackbar('Error', 'Something went wrong. Please try again.');
-    Get.back();
+    Get.snackbar('Error', 'Could not load chat. Missing client or counselor ID.');
   }
 }
   
@@ -73,30 +111,30 @@ void onClose() {
   }
   
   Future<void> loadChatMessages() async {
-    try {
-      isLoading.value = true;
+  print("load chatmessages started");
+  try {
+    isLoading.value = true;
+    
+    if (_clientId != null && _counselorId != null) {
+      // Mark messages as read first - keep this on main thread as it's quick
+      await _dbService.markMessagesAsRead(_clientId!, _counselorId!, _counselorId!);
       
-      if (_clientId != null && _counselorId != null) {
-        // Mark messages as read first
-        await _dbService.markMessagesAsRead(_clientId!, _counselorId!, _counselorId!);
-        
-        // Then load messages
-        List<Map<String, dynamic>> chatData = await _dbService.getChatMessages(_clientId!, _counselorId!);
-        
-        // Convert to ChatModel objects and sort by timestamp (newest first)
-        List<ChatModel> chatMessages = chatData
-            .map((map) => ChatModel.fromMap(map, map['id'] ?? ''))
-            .toList();
-        
-        chatMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        messages.value = chatMessages;
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to load messages: ${e.toString()}');
-    } finally {
-      isLoading.value = false;
+      // Then load messages - fetch data on main thread
+      List<Map<String, dynamic>> chatData = await _dbService.getChatMessages(_clientId!, _counselorId!);
+      
+      // Process in isolate
+      final chatMessages = await processMessagesWithIsolate(chatData);
+      
+      // Sort after receiving from isolate
+      chatMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      messages.value = chatMessages;
     }
+  } catch (e) {
+    Get.snackbar('Error', 'Failed to load messages: ${e.toString()}');
+  } finally {
+    isLoading.value = false;
   }
+}
   
   Future<void> loadClientTestResults() async {
     try {
@@ -182,6 +220,7 @@ void onClose() {
 void setupMessageListener() {
   if (_clientId != null && _counselorId != null) {
     String chatId = "${_clientId}_${_counselorId}";
+    print("setupmessagelistener started $chatId");
     
     // Batch updates with debouncing
     List<ChatModel> pendingMessages = [];
@@ -192,47 +231,39 @@ void setupMessageListener() {
     .child('chats')
     .child(chatId)
     .onChildAdded
-    .listen((event) {
+    .listen((event) async {
       try {
-        // Process new message
-        if (event.snapshot.exists) {
-          // Skip if it's a 'participants' node
-          if (event.snapshot.key == 'participants') return;
+        // Skip if it's a 'participants' node
+        if (event.snapshot.key == 'participants') return;
+        if (!event.snapshot.exists) return;
+        
+        var snapshotData = event.snapshot.value;
+        if (snapshotData is! Map) return;
+        
+        // Process in isolate
+        final newMessage = await compute(
+          processNewMessageInIsolate, 
+          {'data': snapshotData, 'messageId': event.snapshot.key}
+        );
+        
+        if (newMessage != null && !messages.any((msg) => msg.id == newMessage.id)) {
+          pendingMessages.add(newMessage);
           
-          // Safely convert data
-          var snapshotData = event.snapshot.value;
-          if (snapshotData is! Map) return;
-          
-          Map<String, dynamic> value = {};
-          (snapshotData as Map).forEach((key, val) {
-            value[key.toString()] = val;
-          });
-          
-          value['id'] = event.snapshot.key;
-          
-          // Convert message data
-          ChatModel newMessage = ChatModel.fromMap(value, value['id'] ?? '');
-          
-          // Check if message already exists
-          if (!messages.any((msg) => msg.id == newMessage.id)) {
-            pendingMessages.add(newMessage);
-            
-            // Debounce updates
-            debounceTimer?.cancel();
-            debounceTimer = Timer(const Duration(milliseconds: 300), () {
-              if (pendingMessages.isNotEmpty) {
-                messages.insertAll(0, pendingMessages);
-                
-                // Mark messages as read once per batch
-                final hasUnreadFromClient = pendingMessages.any((msg) => msg.senderId != _counselorId);
-                if (hasUnreadFromClient) {
-                  _dbService.markMessagesAsRead(_clientId!, _counselorId!, _counselorId!);
-                }
-                
-                pendingMessages.clear();
+          // Debounce updates
+          debounceTimer?.cancel();
+          debounceTimer = Timer(const Duration(milliseconds: 300), () {
+            if (pendingMessages.isNotEmpty) {
+              messages.insertAll(0, pendingMessages);
+              
+              // Mark messages as read once per batch
+              final hasUnreadFromClient = pendingMessages.any((msg) => msg.senderId != _counselorId);
+              if (hasUnreadFromClient) {
+                _dbService.markMessagesAsRead(_clientId!, _counselorId!, _counselorId!);
               }
-            });
-          }
+              
+              pendingMessages.clear();
+            }
+          });
         }
       } catch (e) {
         print('Error in message listener: ${e.toString()}');
@@ -248,12 +279,12 @@ void setupMessageListener() {
   }
   
   Future<void> sendMessage() async {
+    print("send message started");
     if (!canSendMessage.value || _counselorId == null || _clientId == null) return;
     
     final text = messageController.text.trim();
     messageController.clear();
     canSendMessage.value = false;
-    
     try {
       // Add message optimistically for instant UI update
       final newMessage = ChatModel(
@@ -265,8 +296,7 @@ void setupMessageListener() {
         isRead: false,
       );
       
-      messages.insert(0, newMessage);
-      
+      print("dbservice starting");
       // Save to database
       await _dbService.saveChatMessage(_clientId!, _counselorId!, _counselorId!, text);
     } catch (e) {

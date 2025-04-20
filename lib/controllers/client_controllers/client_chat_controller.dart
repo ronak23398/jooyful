@@ -131,7 +131,6 @@ class ChatController extends GetxController {
         isRead: false,
       );
       
-      messages.insert(0, newMessage);
       
       // Save to database
       await _dbService.saveChatMessage(_clientId!, _counselorId!, _clientId!, text);

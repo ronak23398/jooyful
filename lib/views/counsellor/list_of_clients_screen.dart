@@ -9,9 +9,7 @@ class MyClientsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Clients'),
-      ),
+      appBar: AppBar(title: const Text('My Clients')),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());
@@ -21,10 +19,7 @@ class MyClientsScreen extends StatelessWidget {
           return const Center(
             child: Text(
               'No clients assigned to you yet',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
           );
         }
@@ -70,19 +65,11 @@ class MyClientsScreen extends StatelessWidget {
         ),
         title: Text(
           client.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8.0),
-          child: Text(
-            client.email,
-            style: TextStyle(
-              color: Colors.grey[600],
-            ),
-          ),
+          child: Text(client.email, style: TextStyle(color: Colors.grey[600])),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -91,14 +78,21 @@ class MyClientsScreen extends StatelessWidget {
               icon: const Icon(Icons.chat_bubble_outline, color: Colors.blue),
               onPressed: () {
                 controller.selectClient(client);
-                Get.toNamed('/counselor/chat');
+                // Pass clientId directly in the arguments
+                Get.toNamed(
+                  '/counselor/chat',
+                  arguments: {'clientId': client.uid},
+                );
               },
             ),
             IconButton(
               icon: const Icon(Icons.description_outlined, color: Colors.green),
               onPressed: () {
                 // Navigate to client test details screen
-                Get.toNamed('/counselor/client-test-details', arguments: client);
+                Get.toNamed(
+                  '/counselor/client-test-details',
+                  arguments: client,
+                );
               },
             ),
           ],

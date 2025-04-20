@@ -1,6 +1,7 @@
 
 
 import 'package:get/get.dart';
+import 'package:jooyful_heaven/controllers/counsellor/counsellor_chat_controller.dart';
 import 'package:jooyful_heaven/models/appointment_model.dart';
 import 'package:jooyful_heaven/models/chat_model.dart';
 import 'package:jooyful_heaven/models/user_model.dart';
@@ -10,6 +11,8 @@ import 'package:jooyful_heaven/services/realtime_db_service.dart';
 class CounselorController extends GetxController {
   final FirebaseAuthService authService;
   final RealtimeDbService dbService;
+  
+  CounselorChatController? chatController;
 
   CounselorController({
     required this.authService,
@@ -83,43 +86,53 @@ class CounselorController extends GetxController {
   }
 
   void selectClient(UserModel client) {
-    selectedClient.value = client;
-    loadClientChat(client.uid);
-  }
+  selectedClient.value = client;
+  // Don't load chat here
+}
 
   Future<void> loadClientChat(String clientId) async {
-    try {
-      final counselorId = authService.currentUser?.uid;
-      if (counselorId == null) return;
+  try {
+    final counselorId = authService.currentUser?.uid;
+    if (counselorId == null) return;
+    
+    final chatId = '${clientId}_$counselorId';
+    final chatData = await dbService.get('chats/$chatId');
+    
+    if (chatData != null && chatData is Map) {
+      List<ChatModel> chatMessages = [];
       
-      final chatId = '${clientId}_$counselorId';
-      final chatData = await dbService.get('chats/$chatId');
+      chatData.forEach((messageId, data) {
+        // Skip participants node
+        if (messageId == 'participants') return;
+        
+        if (data is Map) {
+          // Convert to Map<String, dynamic>
+          Map<String, dynamic> messageData = {};
+          data.forEach((key, val) {
+            messageData[key.toString()] = val;
+          });
+          
+          messageData['id'] = messageId;
+          
+          try {
+            final message = ChatModel.fromMap(messageData, messageId.toString());
+            chatMessages.add(message);
+          } catch (e) {
+            print('Error converting message $messageId: $e');
+          }
+        }
+      });
       
-      if (chatData != null && chatData is Map) {
-        List<ChatModel> chatMessages = [];
-        
-        chatData.forEach((messageId, data) {
-  Map<String, dynamic> messageData = data as Map<String, dynamic>;
-  final message = ChatModel.fromMap(
-    {
-      ...messageData,
-      'id': messageId,
-    },
-    messageId  // Pass messageId as the second parameter
-  );
-  chatMessages.add(message);
-});
-        
-        // Sort messages by timestamp
-        chatMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-        currentChat.value = chatMessages;
-      } else {
-        currentChat.value = [];
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to load chat: ${e.toString()}');
+      // Sort messages by timestamp
+      chatMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      currentChat.value = chatMessages;
+    } else {
+      currentChat.value = [];
     }
+  } catch (e) {
+    Get.snackbar('Error', 'Failed to load chat: ${e.toString()}');
   }
+}
 
   Future<void> sendMessage(String text) async {
     try {

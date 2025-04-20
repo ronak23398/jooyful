@@ -5,7 +5,8 @@ import 'package:jooyful_heaven/controllers/auth_controllers.dart';
 import 'package:jooyful_heaven/controllers/counsellor/counsellor_chat_controller.dart';
 import 'package:jooyful_heaven/models/chat_model.dart';
 
-class CounselorChatScreen extends GetView<CounselorChatController> {
+class CounselorChatScreen extends StatelessWidget {
+  final CounselorChatController controller = Get.put(CounselorChatController());
   final AuthController authController = Get.find<AuthController>();
   
   @override
