@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:get/get.dart';
+import 'package:jooyful_heaven/controllers/client_controllers/client_chat_controller.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -36,13 +38,27 @@ class FirebaseAuthService {
   }
 
   // Sign out
-  Future<void> signOut() async {
-    try {
-      return await _auth.signOut();
-    } catch (e) {
-      throw e;
-    }
+ Future<void> signOut() async {
+  try {
+    // Clean up all Firebase listeners before sign out
+    _cleanupAllListeners();
+    
+    // Then sign out
+    return await _auth.signOut();
+  } catch (e) {
+    throw e;
   }
+}
+
+void _cleanupAllListeners() {
+  // Clean up ClientChatController listeners if it exists
+  if (Get.isRegistered<ClientChatController>()) {
+    Get.find<ClientChatController>().cancelAllListeners();
+  }
+  
+  // Clean up any other controllers with Firebase listeners
+  // Add similar checks for other controllers
+}
 
   // Password reset
   Future<void> resetPassword(String email) async {

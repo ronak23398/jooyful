@@ -23,10 +23,13 @@ class AuthController extends GetxController {
   }
 
   void _setInitialScreen(User? user) async {
-    if (user == null) {
-      // Not logged in, navigate to login
-      Get.offAllNamed(AppRoutes.LOGIN);
-    } else {
+  // Add a small delay to ensure GetMaterialApp is initialized
+  await Future.delayed(Duration(milliseconds: 100));
+  
+  if (user == null) {
+    // Not logged in, navigate to login
+    Get.offAllNamed(AppRoutes.LOGIN);
+  } else {
       // User logged in, get user data
       try {
         isLoading.value = true;

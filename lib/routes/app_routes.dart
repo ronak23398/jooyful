@@ -158,7 +158,7 @@ GetPage(
       name: AppRoutes.CHAT_SCREEN,
       page: () => ClientChatScreen(),
       binding: BindingsBuilder(() {
-        Get.lazyPut<ChatController>(() => ChatController());
+        Get.lazyPut<ClientChatController>(() => ClientChatController());
       }),
     ),
   // GetPage(

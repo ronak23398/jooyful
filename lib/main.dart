@@ -6,14 +6,15 @@ import 'routes/app_routes.dart';
 import 'firebase_options.dart';
 
 void main() async {
+  // Ensure Flutter is initialized
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize Firebase
+  // Initialize Firebase with your configuration
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  // Inject Auth Controller
+  // Inject Auth Controller as a permanent dependency
   Get.put(AuthController(), permanent: true);
   
   runApp(MyApp());
@@ -63,6 +64,27 @@ class MyApp extends StatelessWidget {
       initialRoute: AppRoutes.LOGIN,
       getPages: appPages,
       debugShowCheckedModeBanner: false,
+      // Enable GetX error reporting in debug mode
+      enableLog: true,
+      // Initialize GetX logging system
+      logWriterCallback: (String text, {bool isError = false}) {
+        if (isError) {
+          debugPrint("GetX ERROR: $text");
+        } else {
+          debugPrint("GetX LOG: $text");
+        }
+      },
+      // Default transitions for routes
+      defaultTransition: Transition.fade,
+      // Error handling for routes
+      unknownRoute: GetPage(
+        name: '/not-found',
+        page: () => Scaffold(
+          body: Center(
+            child: Text("Route not found"),
+          ),
+        ),
+      ),
     );
   }
 }

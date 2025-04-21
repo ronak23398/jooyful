@@ -16,7 +16,8 @@ class LoginScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: SingleChildScrollView(scrollDirection: Axis.vertical,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
           child: Padding(
             padding: const EdgeInsets.all(10.0),
             child: Column(
@@ -24,16 +25,12 @@ class LoginScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // App Logo or Icon
-                Icon(
-                  Icons.psychology_alt_rounded,
-                  size: 80,
-                  color: Theme.of(context).primaryColor,
-                ),
+                Image.asset('assets/icon.jpeg', height: 80, width: 80),
                 const SizedBox(height: 16),
-                
+
                 // App Name
                 Text(
-                  'Mental Health App',
+                  'Jooyfull heaven counselling',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 28,
@@ -42,7 +39,7 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 48),
-                
+
                 // Email Field
                 CustomTextField(
                   controller: emailController,
@@ -51,7 +48,7 @@ class LoginScreen extends StatelessWidget {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Password Field
                 CustomTextField(
                   controller: passwordController,
@@ -60,7 +57,7 @@ class LoginScreen extends StatelessWidget {
                   obscureText: true,
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Forgot Password
                 Align(
                   alignment: Alignment.centerRight,
@@ -72,28 +69,31 @@ class LoginScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Login Button
-                Obx(() => CustomButton(
-                  text: 'Login',
-                  isLoading: authController.isLoading.value,
-                  onPressed: () {
-                    if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
-                      authController.login(
-                        emailController.text,
-                        passwordController.text,
-                      );
-                    } else {
-                      Get.snackbar(
-                        'Error',
-                        'Please fill all fields',
-                        snackPosition: SnackPosition.BOTTOM,
-                      );
-                    }
-                  },
-                )),
+                Obx(
+                  () => CustomButton(
+                    text: 'Login',
+                    isLoading: authController.isLoading.value,
+                    onPressed: () {
+                      if (emailController.text.isNotEmpty &&
+                          passwordController.text.isNotEmpty) {
+                        authController.login(
+                          emailController.text,
+                          passwordController.text,
+                        );
+                      } else {
+                        Get.snackbar(
+                          'Error',
+                          'Please fill all fields',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      }
+                    },
+                  ),
+                ),
                 const SizedBox(height: 16),
-                
+
                 // Sign up link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
