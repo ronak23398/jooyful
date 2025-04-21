@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:jooyful_heaven/services/article_service.dart';
 import 'dart:io';
 import '../services/realtime_db_service.dart';
 import '../services/storage_service.dart';
@@ -20,7 +21,7 @@ class ArticleController extends GetxController {
   Future<void> fetchArticles() async {
     try {
       isLoading.value = true;
-      final List<ArticleModel> fetchedArticles = await _dbService.getArticles();
+      final List<ArticleModel> fetchedArticles = await ArticleService(_dbService).getArticles();
       articles.value = fetchedArticles;
     } catch (e) {
       Get.snackbar('Error', 'Failed to load articles: ${e.toString()}');
@@ -59,7 +60,7 @@ class ArticleController extends GetxController {
       );
       
       // Add to database
-      await _dbService.addArticle(article);
+      await ArticleService(_dbService).addArticle(article);
       
       // Refresh articles list
       await fetchArticles();
@@ -77,7 +78,7 @@ class ArticleController extends GetxController {
   Future<void> deleteArticle(String articleId) async {
     try {
       isLoading.value = true;
-      await _dbService.deleteArticle(articleId);
+      await ArticleService(_dbService).deleteArticle(articleId);
       await fetchArticles();
       Get.snackbar('Success', 'Article deleted successfully');
     } catch (e) {

@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:jooyful_heaven/routes/app_routes.dart';
+import 'package:jooyful_heaven/services/user_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/realtime_db_service.dart';
 import '../models/user_model.dart';
@@ -33,7 +34,7 @@ class AuthController extends GetxController {
       // User logged in, get user data
       try {
         isLoading.value = true;
-        userModel.value = await _dbService.getUserData(user.uid);
+        userModel.value = await UserService(_dbService).getUserData(user.uid);
         // Only navigate if user model is not null
         if (userModel.value != null) {
           _navigateBasedOnRole();
@@ -101,7 +102,7 @@ class AuthController extends GetxController {
         
         // 3. Save to database
         try {
-          await _dbService.createUser(newUser);
+          await UserService(_dbService).createUser(newUser);
           print("User successfully saved to Realtime DB");
           
           // 4. Set user model

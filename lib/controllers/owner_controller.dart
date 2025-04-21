@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:jooyful_heaven/services/counsellor_req_service.dart';
+import 'package:jooyful_heaven/services/user_service.dart';
 import '../models/user_model.dart';
 import '../services/realtime_db_service.dart';
 
@@ -34,7 +36,7 @@ class OwnerController extends GetxController {
       interns.clear();
       
       // Fetch all users from database
-      List<UserModel> allUsers = await _dbService.getAllUsers();
+      List<UserModel> allUsers = await UserService(_dbService).getAllUsers();
       
       // Sort users by role
       for (var user in allUsers) {
@@ -63,7 +65,7 @@ class OwnerController extends GetxController {
   Future<void> fetchCounselorRequests() async {
     try {
       // Fetch pending counselor requests from database
-      List<Map<String, dynamic>> requests = await _dbService.getCounselorRequests();
+      List<Map<String, dynamic>> requests = await CounselorRequestService(_dbService).getCounselorRequests();
       pendingRequests.value = requests.where((req) => req['status'] == 'pending').toList();
     } catch (e) {
       Get.snackbar('Error', 'Failed to load counselor requests: ${e.toString()}');
@@ -91,10 +93,10 @@ class OwnerController extends GetxController {
       print("Assigning counselor ${counselor.name} (ID: $counselorId) to client ID: $clientId");
       
       // Update client with assigned counselor
-      await _dbService.assignCounselorToClient(clientId, counselorId);
+      await UserService(_dbService).assignCounselorToClient(clientId, counselorId);
       
       // Update request status to completed
-      await _dbService.updateCounselorRequestStatus(clientId, 'completed');
+      await CounselorRequestService(_dbService).updateCounselorRequestStatus(clientId, 'completed');
       
       print("Counselor successfully assigned");
       
@@ -117,7 +119,7 @@ class OwnerController extends GetxController {
       isLoading.value = true;
       
       // Update client to remove assigned counselor
-      await _dbService.assignCounselorToClient(clientId,null);
+      await UserService(_dbService).assignCounselorToClient(clientId,null);
       
       // Refresh data
       await fetchAllUsers();

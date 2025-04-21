@@ -3,7 +3,12 @@
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
 import 'package:jooyful_heaven/models/user_model.dart';
+import 'package:jooyful_heaven/services/appointment_service.dart';
+import 'package:jooyful_heaven/services/article_service.dart';
+import 'package:jooyful_heaven/services/counsellor_req_service.dart';
 import 'package:jooyful_heaven/services/realtime_db_service.dart';
+import 'package:jooyful_heaven/services/test_service.dart';
+import 'package:jooyful_heaven/services/user_service.dart';
 
 class ClientController extends GetxController {
   final RealtimeDbService _dbService = RealtimeDbService();
@@ -58,7 +63,7 @@ class ClientController extends GetxController {
     
     // Load counselor data if assigned
     if (assignedCounselorId.value.isNotEmpty) {
-      counselor.value = await _dbService.getUserData(assignedCounselorId.value);
+      counselor.value = await UserService(_dbService).getUserData(assignedCounselorId.value);
     }
     
     // Load appointments
@@ -79,7 +84,7 @@ class ClientController extends GetxController {
         
         // Load counselor data if assigned
         if (assignedCounselorId.value.isNotEmpty) {
-          counselor.value = await _dbService.getUserData(assignedCounselorId.value);
+          counselor.value = await UserService(_dbService).getUserData(assignedCounselorId.value);
         }
         
         // Check if there's a pending counselor request with the optimized method
@@ -111,19 +116,19 @@ class ClientController extends GetxController {
       
       // Get mental health articles first
       List<Map<String, dynamic>> mentalHealthArticles = 
-          await _dbService.getArticlesByCategory('mental-health');
+          await ArticleService(_dbService).getArticlesByCategory('mental-health');
       allArticles.addAll(mentalHealthArticles);
       articles.value = allArticles; // Update UI with first batch
       
       // Get anxiety articles next
       List<Map<String, dynamic>> anxietyArticles = 
-          await _dbService.getArticlesByCategory('anxiety');
+          await ArticleService(_dbService).getArticlesByCategory('anxiety');
       allArticles.addAll(anxietyArticles);
       articles.value = allArticles; // Update UI with second batch
       
       // Get depression articles last
       List<Map<String, dynamic>> depressionArticles = 
-          await _dbService.getArticlesByCategory('depression');
+          await ArticleService(_dbService).getArticlesByCategory('depression');
       allArticles.addAll(depressionArticles);
       articles.value = allArticles; // Update UI with all articles
       
@@ -164,7 +169,7 @@ class ClientController extends GetxController {
   Future<void> checkCounselorRequest(String userId) async {
     try {
       // Use the optimized method that only checks this specific user's request
-      hasCounselorRequest.value = await _dbService.hasClientCounselorRequest(userId);
+      hasCounselorRequest.value = await CounselorRequestService(_dbService).hasClientCounselorRequest(userId);
     } catch (e) {
       print("Error checking counselor request: $e");
       hasCounselorRequest.value = false;
@@ -177,7 +182,7 @@ class ClientController extends GetxController {
       String? userId = _authController.userModel.value?.uid;
       
       if (userId != null) {
-        await _dbService.requestCounselor(userId);
+        await CounselorRequestService(_dbService).requestCounselor(userId);
         hasCounselorRequest.value = true;
         Get.snackbar('Success', 'Counselor request submitted successfully');
       }
@@ -194,7 +199,7 @@ class ClientController extends GetxController {
       String? userId = _authController.userModel.value?.uid;
       
       if (userId != null && assignedCounselorId.value.isNotEmpty) {
-        await _dbService.createAppointmentRequest(
+        await AppointmentService(_dbService).createAppointmentRequest(
           userId, 
           assignedCounselorId.value, 
           date, 
@@ -281,7 +286,7 @@ class ClientController extends GetxController {
       String? userId = _authController.userModel.value?.uid;
       
       if (userId != null) {
-        await _dbService.saveTestResult(userId, testId, score);
+        await TestService(_dbService).saveTestResult(userId, testId, score);
         
         // Update local test results
         testResults.add({

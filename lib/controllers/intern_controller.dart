@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:jooyful_heaven/services/article_service.dart';
 import '../services/realtime_db_service.dart';
 
 class InternController extends GetxController {
@@ -37,17 +38,17 @@ class InternController extends GetxController {
       
       // Get mental health articles
       List<Map<String, dynamic>> mentalHealthArticles = 
-          await _dbService.getArticlesByCategory('mental-health');
+          await ArticleService(_dbService).getArticlesByCategory('mental-health');
       allArticles.addAll(mentalHealthArticles);
       
       // Get anxiety articles
       List<Map<String, dynamic>> anxietyArticles = 
-          await _dbService.getArticlesByCategory('anxiety');
+          await ArticleService(_dbService).getArticlesByCategory('anxiety');
       allArticles.addAll(anxietyArticles);
       
       // Get depression articles
       List<Map<String, dynamic>> depressionArticles = 
-          await _dbService.getArticlesByCategory('depression');
+          await ArticleService(_dbService).getArticlesByCategory('depression');
       allArticles.addAll(depressionArticles);
       
       articles.value = allArticles;
@@ -59,7 +60,7 @@ class InternController extends GetxController {
   Future<void> loadStudyMaterials() async {
     try {
       // Get study materials uploaded by owner
-      List<Map<String, dynamic>> materials = await _dbService.getStudyMaterials();
+      List<Map<String, dynamic>> materials = await ArticleService(_dbService).getStudyMaterials();
       studyMaterials.value = materials;
     } catch (e) {
       Get.snackbar('Error', 'Failed to load study materials: ${e.toString()}');

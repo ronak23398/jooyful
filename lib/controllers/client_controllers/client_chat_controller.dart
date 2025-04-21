@@ -6,7 +6,9 @@ import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
 import 'package:jooyful_heaven/models/chat_model.dart';
 import 'package:jooyful_heaven/models/user_model.dart';
+import 'package:jooyful_heaven/services/chat_service.dart';
 import 'package:jooyful_heaven/services/realtime_db_service.dart';
+import 'package:jooyful_heaven/services/user_service.dart';
 
 class ClientChatController extends GetxController {
   final RealtimeDbService _dbService = RealtimeDbService();
@@ -63,7 +65,9 @@ class ClientChatController extends GetxController {
   Future<void> loadCounselorData() async {
     try {
       if (_counselorId != null && _counselorId!.isNotEmpty) {
-        counselor.value = await _dbService.getUserData(_counselorId!);
+        counselor.value = await UserService(
+          _dbService,
+        ).getUserData(_counselorId!);
         isCounselorLoaded.value = true;
       }
     } catch (e) {
@@ -77,17 +81,14 @@ class ClientChatController extends GetxController {
 
       if (_clientId != null && _counselorId != null) {
         // Mark messages as read first
-        await _dbService.markMessagesAsRead(
-          _clientId!,
-          _counselorId!,
-          _clientId!,
-        );
+        await ChatService(
+          _dbService,
+        ).markMessagesAsRead(_clientId!, _counselorId!, _clientId!);
 
         // Then load messages
-        List<Map<String, dynamic>> chatData = await _dbService.getChatMessages(
-          _clientId!,
-          _counselorId!,
-        );
+        List<Map<String, dynamic>> chatData = await ChatService(
+          _dbService,
+        ).getChatMessages(_clientId!, _counselorId!);
 
         // Convert to ChatModel objects and sort by timestamp (newest first)
         List<ChatModel> chatMessages =
@@ -131,11 +132,9 @@ class ClientChatController extends GetxController {
 
                 // Mark as read if from the other person
                 if (newMessage.senderId != _clientId) {
-                  _dbService.markMessagesAsRead(
-                    _clientId!,
-                    _counselorId!,
-                    _clientId!,
-                  );
+                  ChatService(
+                    _dbService,
+                  ).markMessagesAsRead(_clientId!, _counselorId!, _clientId!);
                 }
               }
             }
@@ -156,29 +155,16 @@ class ClientChatController extends GetxController {
     canSendMessage.value = false;
 
     try {
-      // Add message optimistically for instant UI update
-      final newMessage = ChatModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        senderId: _clientId!,
-        receiverId: _counselorId!,
-        text: text,
-        timestamp: DateTime.now(),
-        isRead: false,
-      );
-
       // Save to database
-      await _dbService.saveChatMessage(
-        _clientId!,
-        _counselorId!,
-        _clientId!,
-        text,
-      );
+      await ChatService(
+        _dbService,
+      ).saveChatMessage(_clientId!, _counselorId!, _clientId!, text);
     } catch (e) {
       Get.snackbar('Error', 'Failed to send message: ${e.toString()}');
       // Remove the optimistically added message if there was an error
       messages.removeWhere(
         (msg) =>
-            msg!.text == text &&
+            msg.text == text &&
             msg.timestamp.difference(DateTime.now()).inSeconds < 5,
       );
     }

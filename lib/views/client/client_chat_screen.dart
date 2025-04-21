@@ -282,7 +282,7 @@ class ClientChatScreen extends GetView<ClientChatController> {
             ),
             SizedBox(height: 8),
             Text(
-              controller.counselor.value!.role ?? 'Dedicated professional counselor committed to supporting your mental health journey.',
+              controller.counselor.value!.role,
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[800],
