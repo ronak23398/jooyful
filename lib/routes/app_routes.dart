@@ -3,6 +3,7 @@ import 'package:jooyful_heaven/bindings/auth_binding.dart';
 import 'package:jooyful_heaven/bindings/client_binding.dart';
 import 'package:jooyful_heaven/bindings/counsellor_binding.dart';
 import 'package:jooyful_heaven/bindings/owner_binding.dart';
+import 'package:jooyful_heaven/controllers/article_controller.dart';
 import 'package:jooyful_heaven/controllers/client_controllers/client_chat_controller.dart';
 import 'package:jooyful_heaven/controllers/counsellor/counsellor_chat_controller.dart';
 import 'package:jooyful_heaven/controllers/counsellor/counsellor_controller.dart';
@@ -109,6 +110,7 @@ final appPages = [
       binding: BindingsBuilder(() {
         // Make sure OwnerController is available
         Get.lazyPut<OwnerController>(() => OwnerController());
+        Get.lazyPut<ArticleController>(() => ArticleController());
       }),
     ),
   GetPage(

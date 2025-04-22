@@ -13,7 +13,7 @@ class UploadArticleScreen extends StatefulWidget {
 }
 
 class _UploadArticleScreenState extends State<UploadArticleScreen> {
-  final ArticleController controller = Get.find<ArticleController>();
+  final ArticleController controller = Get.put(ArticleController());
   final _formKey = GlobalKey<FormState>();
   final titleController = TextEditingController();
   final contentController = TextEditingController();

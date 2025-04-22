@@ -56,36 +56,55 @@ class ArticleService {
   }
 
   // Get all articles
-  Future<List<ArticleModel>> getArticles() async {
-    try {
-      DataSnapshot snapshot = await _dbService.dbRef.child('articles').get();
+  // Get all articles
+Future<List<ArticleModel>> getArticles() async {
+  try {
+    DataSnapshot snapshot = await _dbService.dbRef.child('articles').get();
+    List<ArticleModel> articles = [];
 
-      List<ArticleModel> articles = [];
-
-      if (snapshot.exists && snapshot.value != null) {
-        Map<dynamic, dynamic> categories =
-            snapshot.value as Map<dynamic, dynamic>;
+    if (snapshot.exists && snapshot.value != null) {
+      try {
+        // Try to parse as categories map
+        Map<dynamic, dynamic> categories = snapshot.value as Map<dynamic, dynamic>;
+        
         categories.forEach((category, categoryData) {
-          Map<dynamic, dynamic> articlesInCategory =
-              categoryData as Map<dynamic, dynamic>;
-          articlesInCategory.forEach((key, value) {
-            Map<dynamic, dynamic> articleData = value as Map<dynamic, dynamic>;
-            // Add category and id to the map
-            Map<String, dynamic> formattedData = Map<String, dynamic>.from(
-              articleData,
-            );
-            formattedData['category'] = category;
-            articles.add(ArticleModel.fromMap(formattedData, key.toString()));
-          });
+          // Ensure categoryData is a Map
+          if (categoryData is Map) {
+            (categoryData).forEach((articleId, articleData) {
+              // Ensure articleData is a Map
+              if (articleData is Map) {
+                try {
+                  // Convert to a properly typed Map
+                  Map<String, dynamic> formattedData = Map<String, dynamic>.from(articleData);
+                  
+                  // Make sure category is explicitly set
+                  formattedData['category'] = category.toString();
+                  
+                  // Create ArticleModel with robust error handling
+                  try {
+                    articles.add(ArticleModel.fromMap(formattedData, articleId.toString()));
+                  } catch (e) {
+                    print("Error parsing article $articleId: $e");
+                    // Skip this article but continue processing others
+                  }
+                } catch (e) {
+                  print("Error formatting article data for $articleId: $e");
+                }
+              }
+            });
+          }
         });
+      } catch (e) {
+        print("Error processing articles structure: $e");
       }
-
-      return articles;
-    } catch (e) {
-      print("Error getting all articles: $e");
-      throw e;
     }
+
+    return articles;
+  } catch (e) {
+    print("Error getting all articles: $e");
+    throw e;
   }
+}
 
   // Add article
   Future<void> addArticle(ArticleModel article) async {

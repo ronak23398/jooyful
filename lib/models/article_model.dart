@@ -23,42 +23,42 @@ class ArticleModel {
     this.imageUrl,
   });
 
-  factory ArticleModel.fromMap(Map<String, dynamic> map, String id) {
-    // Handle the tags which should be a List<String>
-    List<String> parsedTags = [];
-    if (map['tags'] != null) {
-      if (map['tags'] is List) {
-        parsedTags = List<String>.from(map['tags']);
-      } else if (map['tags'] is Map) {
-        parsedTags = (map['tags'] as Map).values.map((e) => e.toString()).toList();
-      }
+ factory ArticleModel.fromMap(Map<String, dynamic> map, String id) {
+  // Handle the tags which should be a List<String>
+  List<String> parsedTags = [];
+  if (map['tags'] != null) {
+    if (map['tags'] is List) {
+      parsedTags = List<String>.from(map['tags']);
+    } else if (map['tags'] is Map) {
+      parsedTags = (map['tags'] as Map).values.map((e) => e.toString()).toList();
     }
-
-    // Handle the audience which should be a List<String>
-    List<String> parsedAudience = [];
-    if (map['audience'] != null) {
-      if (map['audience'] is List) {
-        parsedAudience = List<String>.from(map['audience']);
-      } else if (map['audience'] is Map) {
-        parsedAudience = (map['audience'] as Map).values.map((e) => e.toString()).toList();
-      }
-    }
-
-    return ArticleModel(
-      id: id,
-      title: map['title'] ?? '',
-      content: map['content'] ?? '',
-      category: map['category'] ?? 'uncategorized',
-      createdAt: map['createdAt'] != null
-         ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
-        : DateTime.now(),
-      authorId: map['authorId'],
-      authorName: map['authorName'],
-      tags: parsedTags,
-      audience: parsedAudience,
-      imageUrl: map['imageUrl'],
-    );
   }
+
+  // Handle the audience which should be a List<String>
+  List<String> parsedAudience = [];
+  if (map['audience'] != null) {
+    if (map['audience'] is List) {
+      parsedAudience = List<String>.from(map['audience']);
+    } else if (map['audience'] is Map) {
+      parsedAudience = (map['audience'] as Map).values.map((e) => e.toString()).toList();
+    }
+  }
+
+  return ArticleModel(
+    id: id,
+    title: map['title'] ?? '',
+    content: map['content'] ?? '',
+    category: map['category'] ?? 'uncategorized',  // Provide default value
+    createdAt: map['createdAt'] != null
+        ? DateTime.fromMillisecondsSinceEpoch(map['createdAt'])
+        : DateTime.now(),
+    authorId: map['authorId'],
+    authorName: map['authorName'],
+    tags: parsedTags,
+    audience: parsedAudience,
+    imageUrl: map['imageUrl'],
+  );
+}
 
   Map<String, dynamic> toMap() {
     return {

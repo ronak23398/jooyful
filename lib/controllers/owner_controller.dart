@@ -83,35 +83,40 @@ class OwnerController extends GetxController {
   }
 
   // Method to assign counselor to client
-  Future<void> assignCounselor(String clientId, String counselorId) async {
-    try {
-      isLoading.value = true;
-      
-      // Get counselor details for logging
-      final counselor = counselors.firstWhere((c) => c.uid == counselorId);
-      
-      print("Assigning counselor ${counselor.name} (ID: $counselorId) to client ID: $clientId");
-      
-      // Update client with assigned counselor
-      await UserService(_dbService).assignCounselorToClient(clientId, counselorId);
-      
-      // Update request status to completed
+Future<void> assignCounselor(String clientId, String counselorId) async {
+  try {
+    isLoading.value = true;
+    
+    // Get counselor details for logging
+    final counselor = counselors.firstWhere((c) => c.uid == counselorId);
+    
+    print("Assigning counselor ${counselor.name} (ID: $counselorId) to client ID: $clientId");
+    
+    // Update client with assigned counselor
+    await UserService(_dbService).assignCounselorToClient(clientId, counselorId);
+    
+    // Check if there's a pending request for this client
+    final pendingRequestIndex = pendingRequests.indexWhere((req) => req['clientId'] == clientId);
+    
+    // If there's a pending request, update its status
+    if (pendingRequestIndex != -1) {
       await CounselorRequestService(_dbService).updateCounselorRequestStatus(clientId, 'completed');
-      
-      print("Counselor successfully assigned");
-      
-      // Refresh data
-      await fetchAllUsers();
-      await fetchCounselorRequests();
-      
-      Get.snackbar('Success', 'Counselor assigned successfully');
-    } catch (e) {
-      print("Error assigning counselor: $e");
-      Get.snackbar('Error', 'Failed to assign counselor: ${e.toString()}');
-    } finally {
-      isLoading.value = false;
     }
+    
+    print("Counselor successfully assigned");
+    
+    // Refresh data
+    await fetchAllUsers();
+    await fetchCounselorRequests();
+    
+    Get.snackbar('Success', 'Counselor assigned successfully');
+  } catch (e) {
+    print("Error assigning counselor: $e");
+    Get.snackbar('Error', 'Failed to assign counselor: ${e.toString()}');
+  } finally {
+    isLoading.value = false;
   }
+}
   
   // Method to unassign counselor from client
   Future<void> unassignCounselor(String clientId) async {

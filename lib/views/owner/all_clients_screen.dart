@@ -235,31 +235,28 @@ class AllClientsScreen extends GetView<OwnerController> {
                           ),
                 ),
                 hasCounselor
-                    ? TextButton.icon(
-                      icon: const Icon(Icons.person_remove, size: 16),
-                      label: const Text('Unassign'),
-                      onPressed: () {
-                        _confirmUnassignCounselor(context, client);
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.red[700],
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                    )
-                    : TextButton.icon(
-                      icon: const Icon(Icons.person_add, size: 16),
-                      label: const Text('Assign'),
-                      onPressed: () {
-                        Get.toNamed(
-                          AppRoutes.ASSIGN_COUNSELOR,
-                          arguments: {'clientId': client.uid},
-                        );
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: Colors.green[700],
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                      ),
-                    ),
+    ? TextButton.icon(
+        icon: const Icon(Icons.person_remove, size: 16),
+        label: const Text('Unassign'),
+        onPressed: () {
+          _confirmUnassignCounselor(context, client);
+        },
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.red[700],
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+      )
+    : TextButton.icon(
+        icon: const Icon(Icons.person_add, size: 16),
+        label: const Text('Assign'),
+        onPressed: () {
+          _showCounselorSelectionDialog(context, client);  // Changed this line
+        },
+        style: TextButton.styleFrom(
+          foregroundColor: Colors.green[700],
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+        ),
+      ),
               ],
             ),
           ],
@@ -314,6 +311,128 @@ class AllClientsScreen extends GetView<OwnerController> {
       },
     );
   }
+  // Add this method to the AllClientsScreen class
+void _showCounselorSelectionDialog(BuildContext context, UserModel client) {
+  // Show dialog with a list of counselors to choose from
+  Get.dialog(
+    Dialog(
+      child: Container(
+        width: double.maxFinite,
+        constraints: BoxConstraints(
+          maxHeight: Get.height * 0.7,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppBar(
+              title: Text('Assign Counselor to ${client.name}'),
+              automaticallyImplyLeading: false,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Get.back(),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Select a counselor to assign to this client:',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Obx(() {
+                if (controller.counselors.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      'No counselors available',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                    ),
+                  );
+                }
+                
+                return ListView.builder(
+                  itemCount: controller.counselors.length,
+                  itemBuilder: (context, index) {
+                    final counselor = controller.counselors[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.orange.shade100,
+                            child: const Icon(Icons.medical_services, color: Colors.orange),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  counselor.name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Text(
+                                  counselor.email,
+                                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Get.back();
+                                _assignCounselor(client.uid, counselor.uid);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Assign'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+// Add this helper method to directly assign a counselor to a client
+void _assignCounselor(String clientId, String counselorId) {
+  Get.dialog(
+    AlertDialog(
+      title: const Text('Confirm Assignment'),
+      content: const Text('Are you sure you want to assign this counselor to the client?'),
+      actions: [
+        TextButton(
+          onPressed: () => Get.back(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Get.back();
+            controller.assignCounselor(clientId, counselorId);
+          },
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+}
 
   void _confirmUnassignCounselor(BuildContext context, UserModel client) {
     showDialog(

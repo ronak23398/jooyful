@@ -2,6 +2,7 @@
 
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
+import 'package:jooyful_heaven/models/article_model.dart';
 import 'package:jooyful_heaven/models/user_model.dart';
 import 'package:jooyful_heaven/services/appointment_service.dart';
 import 'package:jooyful_heaven/services/article_service.dart';
@@ -15,13 +16,13 @@ class ClientController extends GetxController {
   final AuthController _authController = Get.find<AuthController>();
   
   final RxBool isLoading = false.obs;
-  final RxList<Map<String, dynamic>> articles = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> tests = <Map<String, dynamic>>[].obs;
   final RxString assignedCounselorId = ''.obs;
   final Rx<UserModel?> counselor = Rx<UserModel?>(null);
   final RxBool hasCounselorRequest = false.obs;
   final RxList<Map<String, dynamic>> appointments = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> testResults = <Map<String, dynamic>>[].obs;
+final RxList<ArticleModel> articles = <ArticleModel>[].obs;
 
   @override
   void onInit() {
@@ -109,33 +110,94 @@ class ClientController extends GetxController {
     }
   }
 
-  Future<void> loadArticles() async {
-    try {
-      // Load categories one by one
-      List<Map<String, dynamic>> allArticles = [];
+ Future<void> loadArticles() async {
+  try {
+    // Load categories one by one
+    List<ArticleModel> allArticles = [];
+    
+    // Get mental health articles first
+    List<Map<String, dynamic>> mentalHealthArticles = 
+        await ArticleService(_dbService).getArticlesByCategory('mental-health');
+    
+    // Convert to ArticleModel objects
+    for (var articleMap in mentalHealthArticles) {
+      // Ensure category is set
+      if (articleMap['category'] == null) {
+        articleMap['category'] = 'mental-health';
+      }
       
-      // Get mental health articles first
-      List<Map<String, dynamic>> mentalHealthArticles = 
-          await ArticleService(_dbService).getArticlesByCategory('mental-health');
-      allArticles.addAll(mentalHealthArticles);
-      articles.value = allArticles; // Update UI with first batch
+      // Ensure ID exists
+      String id = articleMap['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
       
-      // Get anxiety articles next
-      List<Map<String, dynamic>> anxietyArticles = 
-          await ArticleService(_dbService).getArticlesByCategory('anxiety');
-      allArticles.addAll(anxietyArticles);
-      articles.value = allArticles; // Update UI with second batch
-      
-      // Get depression articles last
-      List<Map<String, dynamic>> depressionArticles = 
-          await ArticleService(_dbService).getArticlesByCategory('depression');
-      allArticles.addAll(depressionArticles);
-      articles.value = allArticles; // Update UI with all articles
-      
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to load articles: ${e.toString()}');
+      try {
+        ArticleModel article = ArticleModel.fromMap(articleMap, id);
+        allArticles.add(article);
+      } catch (e) {
+        print("Error converting mental health article: $e");
+        // Continue with next article if one fails
+      }
     }
+    
+    // Update UI with first batch
+    articles.value = allArticles;
+    
+    // Get anxiety articles next
+    List<Map<String, dynamic>> anxietyArticles = 
+        await ArticleService(_dbService).getArticlesByCategory('anxiety');
+    
+    // Convert to ArticleModel objects
+    for (var articleMap in anxietyArticles) {
+      // Ensure category is set
+      if (articleMap['category'] == null) {
+        articleMap['category'] = 'anxiety';
+      }
+      
+      // Ensure ID exists
+      String id = articleMap['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+      
+      try {
+        ArticleModel article = ArticleModel.fromMap(articleMap, id);
+        allArticles.add(article);
+      } catch (e) {
+        print("Error converting anxiety article: $e");
+        // Continue with next article if one fails
+      }
+    }
+    
+    // Update UI with second batch
+    articles.value = allArticles;
+    
+    // Get depression articles last
+    List<Map<String, dynamic>> depressionArticles = 
+        await ArticleService(_dbService).getArticlesByCategory('depression');
+    
+    // Convert to ArticleModel objects
+    for (var articleMap in depressionArticles) {
+      // Ensure category is set
+      if (articleMap['category'] == null) {
+        articleMap['category'] = 'depression';
+      }
+      
+      // Ensure ID exists
+      String id = articleMap['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+      
+      try {
+        ArticleModel article = ArticleModel.fromMap(articleMap, id);
+        allArticles.add(article);
+      } catch (e) {
+        print("Error converting depression article: $e");
+        // Continue with next article if one fails
+      }
+    }
+    
+    // Update UI with all articles
+    articles.value = allArticles;
+    
+  } catch (e) {
+    print("Error in loadArticles: ${e.toString()}");
+    Get.snackbar('Error', 'Failed to load articles: ${e.toString()}');
   }
+}
 
   Future<void> loadTests() async {
     try {
