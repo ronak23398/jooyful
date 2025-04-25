@@ -7,6 +7,7 @@ import 'package:jooyful_heaven/models/user_model.dart';
 import 'package:jooyful_heaven/services/appointment_service.dart';
 import 'package:jooyful_heaven/services/article_service.dart';
 import 'package:jooyful_heaven/services/counsellor_req_service.dart';
+import 'package:jooyful_heaven/services/mood_service.dart';
 import 'package:jooyful_heaven/services/realtime_db_service.dart';
 import 'package:jooyful_heaven/services/test_service.dart';
 import 'package:jooyful_heaven/services/user_service.dart';
@@ -23,6 +24,10 @@ class ClientController extends GetxController {
   final RxList<Map<String, dynamic>> appointments = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> testResults = <Map<String, dynamic>>[].obs;
 final RxList<ArticleModel> articles = <ArticleModel>[].obs;
+ final RxMap<String, Map<String, dynamic>> weeklyMoods = <String, Map<String, dynamic>>{}.obs;
+  final MoodService _moodService = MoodService(RealtimeDbService());
+  final RxBool hasMoodRecordedToday = false.obs;
+final Rx<Map<String, dynamic>?> todaysMood = Rx<Map<String, dynamic>?>(null);
 
   @override
   void onInit() {
@@ -32,6 +37,7 @@ final RxList<ArticleModel> articles = <ArticleModel>[].obs;
       loadBasicData();
     });
   }
+
 
   Future<void> loadBasicData() async {
     try {
@@ -47,6 +53,9 @@ final RxList<ArticleModel> articles = <ArticleModel>[].obs;
         
         // Then check for counselor request (lightweight operation with the new optimized method)
         await checkCounselorRequest(userData.uid);
+        
+        // Load weekly moods
+        await loadWeeklyMoods();
         
         // Now trigger background loading of heavier data
         _loadRemainingDataInBackground(userData);
@@ -368,4 +377,74 @@ final RxList<ArticleModel> articles = <ArticleModel>[].obs;
       isLoading.value = false;
     }
   }
+
+  
+
+  
+Future<void> checkTodaysMood() async {
+  try {
+    String? userId = _authController.userModel.value?.uid;
+    
+    if (userId != null) {
+      final todayDate = DateTime.now().toString().substring(0, 10); // YYYY-MM-DD format
+      
+      // Check if today's date exists in the weekly moods
+      if (weeklyMoods.containsKey(todayDate)) {
+        hasMoodRecordedToday.value = true;
+        todaysMood.value = weeklyMoods[todayDate];
+      } else {
+        hasMoodRecordedToday.value = false;
+        todaysMood.value = null;
+      }
+    }
+  } catch (e) {
+    print("Error checking today's mood: ${e.toString()}");
+  }
+}
+
+// Modify the saveMood method to update hasMoodRecordedToday
+Future<void> saveMood(String mood, String emoji) async {
+  try {
+    isLoading.value = true;
+    String? userId = _authController.userModel.value?.uid;
+    
+    if (userId != null) {
+      await _moodService.saveMood(userId, mood, emoji);
+      await loadWeeklyMoods(); // Refresh mood data
+      hasMoodRecordedToday.value = true;
+      
+      // Update today's mood
+      final todayDate = DateTime.now().toString().substring(0, 10);
+      todaysMood.value = {
+        'mood': mood,
+        'emoji': emoji,
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+      };
+      
+      Get.snackbar('Success', 'Your mood has been recorded!');
+    }
+  } catch (e) {
+    Get.snackbar('Error', 'Failed to save mood: ${e.toString()}');
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+// Modify loadWeeklyMoods to also check today's mood
+Future<void> loadWeeklyMoods() async {
+  try {
+    String? userId = _authController.userModel.value?.uid;
+    
+    if (userId != null) {
+      final moodData = await _moodService.getWeeklyMoods(userId);
+      weeklyMoods.value = moodData;
+      
+      // Check if user has recorded mood today
+      await checkTodaysMood();
+    }
+  } catch (e) {
+    print("Error loading weekly moods: ${e.toString()}");
+  }
+  
+}
 }

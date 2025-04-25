@@ -96,11 +96,15 @@ Future<void> assignCounselor(String clientId, String counselorId) async {
     await UserService(_dbService).assignCounselorToClient(clientId, counselorId);
     
     // Check if there's a pending request for this client
-    final pendingRequestIndex = pendingRequests.indexWhere((req) => req['clientId'] == clientId);
+    final pendingRequest = pendingRequests.firstWhere(
+      (req) => req['clientId'] == clientId, 
+      orElse: () => <String, dynamic>{}
+    );
     
-    // If there's a pending request, update its status
-    if (pendingRequestIndex != -1) {
-      await CounselorRequestService(_dbService).updateCounselorRequestStatus(clientId, 'completed');
+    // If there's a pending request, update its status using the request ID (not client ID)
+    if (pendingRequest.isNotEmpty) {
+      final requestId = pendingRequest['id']; // Assuming each request has an 'id' field
+      await CounselorRequestService(_dbService).updateCounselorRequestStatus(requestId, 'completed');
     }
     
     print("Counselor successfully assigned");

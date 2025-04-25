@@ -7,17 +7,20 @@ class CounselorRequestService {
   CounselorRequestService(this._dbService);
   
   Future<void> requestCounselor(String clientId) async {
-    try {
-      await _dbService.dbRef.child('counselor_requests').child(clientId).set({
-        'clientId': clientId,
-        'status': 'pending',
-        'timestamp': ServerValue.timestamp,
-      });
-    } catch (e) {
-      print("Error requesting counselor: $e");
-      throw e;
-    }
+  try {
+    // Create a unique request ID (could use push() to generate one)
+    String requestId = _dbService.dbRef.child('counselor_requests').push().key ?? "";
+    
+    await _dbService.dbRef.child('counselor_requests').child(requestId).set({
+      'clientId': clientId,
+      'status': 'pending',
+      'timestamp': ServerValue.timestamp,
+    });
+  } catch (e) {
+    print("Error requesting counselor: $e");
+    throw e;
   }
+}
 
   Future<void> createCounselorRequest(String clientId) async {
     try {
@@ -36,58 +39,56 @@ class CounselorRequestService {
 
   // Get counselor requests
   Future<List<Map<String, dynamic>>> getCounselorRequests() async {
-    try {
-      DataSnapshot snapshot = await _dbService.dbRef.child('counselor_requests').get();
-
-      if (snapshot.exists && snapshot.value != null) {
-        Map<dynamic, dynamic> data = snapshot.value as Map<dynamic, dynamic>;
-        List<Map<String, dynamic>> requests = [];
-
-        data.forEach((key, value) {
-          if (value is Map) {
-            Map<String, dynamic> request = Map<String, dynamic>.from(value);
-            request['requestId'] = key.toString();
-            requests.add(request);
-          }
-        });
-
-        return requests;
-      } else {
-        return [];
-      }
-    } catch (e) {
-      print("Error getting counselor requests: $e");
-      throw e;
+  try {
+    final snapshot = await _dbService.dbRef.child('counselor_requests').get();
+    final List<Map<String, dynamic>> requests = [];
+    
+    if (snapshot.exists && snapshot.value != null) {
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+      
+      data.forEach((key, value) {
+        // Check if value is a Map and not a primitive value
+        if (value is Map) {
+          final request = Map<String, dynamic>.from(value);
+          request['id'] = key; // Include the database key as the ID
+          requests.add(request);
+        }
+      });
     }
+    
+    return requests;
+  } catch (e) {
+    print("Error fetching counselor requests: $e");
+    throw e;
   }
+}
 
   // Check if a specific client has a counselor request
-  Future<bool> hasClientCounselorRequest(String clientId) async {
-    try {
-      // Only check the specific client's request instead of loading all requests
-      DataSnapshot snapshot =
-          await _dbService.dbRef.child('counselor_requests').child(clientId).get();
-      return snapshot.exists;
-    } catch (e) {
-      print("Error checking client counselor request: $e");
-      return false;
-    }
+ Future<bool> hasClientCounselorRequest(String clientId) async {
+  try {
+    DataSnapshot snapshot = await _dbService.dbRef
+        .child('counselor_requests')
+        .orderByChild('clientId')
+        .equalTo(clientId)
+        .get();
+    return snapshot.exists && snapshot.value != null;
+  } catch (e) {
+    print("Error checking client counselor request: $e");
+    return false;
   }
+}
 
   // Update counselor request status
-  Future<void> updateCounselorRequestStatus(
-    String clientId,
-    String status,
-  ) async {
-    try {
-      print("Updating request status for client $clientId to $status");
-      await _dbService.dbRef.child('counselor_requests').child(clientId).update({
-        'status': status,
-      });
-      print("Request status updated successfully");
-    } catch (e) {
-      print("Error updating request status: $e");
-      throw e;
-    }
+ // This should be in your CounselorRequestService class
+Future<void> updateCounselorRequestStatus(String requestId, String status) async {
+  try {
+    // Update the status of the specific request
+    await _dbService.dbRef.child('counselor_requests').child(requestId).update({
+      'status': status
+    });
+  } catch (e) {
+    print("Error updating counselor request status: $e");
+    throw e;
   }
+}
 }

@@ -8,6 +8,7 @@ class SignupScreen extends StatelessWidget {
   final AuthController authController = Get.find<AuthController>();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController(); // New controller for phone
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
 
@@ -82,6 +83,15 @@ class SignupScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               
+              // Phone number field
+              CustomTextField(
+                controller: phoneController,
+                hintText: 'Phone Number',
+                prefixIcon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
+              
               // Password field
               CustomTextField(
                 controller: passwordController,
@@ -137,6 +147,7 @@ class SignupScreen extends StatelessWidget {
                       nameController.text,
                       emailController.text,
                       passwordController.text,
+                      phoneController.text, // Adding phone number here
                     );
                   }
                 },
@@ -164,6 +175,7 @@ class SignupScreen extends StatelessWidget {
   bool _validateFields() {
     if (nameController.text.isEmpty ||
         emailController.text.isEmpty ||
+        phoneController.text.isEmpty ||  // Added phone validation
         passwordController.text.isEmpty ||
         confirmPasswordController.text.isEmpty) {
       Get.snackbar(
@@ -187,6 +199,16 @@ class SignupScreen extends StatelessWidget {
       Get.snackbar(
         'Error',
         'Please enter a valid email',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return false;
+    }
+
+    // Basic phone number validation
+    if (phoneController.text.length < 10) {
+      Get.snackbar(
+        'Error',
+        'Please enter a valid phone number',
         snackPosition: SnackPosition.BOTTOM,
       );
       return false;

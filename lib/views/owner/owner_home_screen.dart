@@ -20,13 +20,18 @@ class OwnerHomeScreen extends GetView<OwnerController> {
         ],
       ),
       body: Obx(
-        () =>
-            controller.isLoading.value
-                ? const Center(child: CircularProgressIndicator())
-                : Padding(
+        () => controller.isLoading.value
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: () async {
+                  // Refresh all data when pulled
+                  await controller.fetchAllUsers();
+                  await controller.fetchCounselorRequests();
+                },
+                child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: SingleChildScrollView(
-                    // Add this
+                    physics: const AlwaysScrollableScrollPhysics(), // Important to make refresh work even when content doesn't scroll
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -66,7 +71,6 @@ class OwnerHomeScreen extends GetView<OwnerController> {
                               controller.clientCount.toString(),
                               Colors.green.shade100,
                               Icons.people,
-                              
                             ),
                             const SizedBox(width: 12),
                             _buildStatCard(
@@ -113,10 +117,9 @@ class OwnerHomeScreen extends GetView<OwnerController> {
                                     ),
                                   ),
                                   TextButton(
-                                    onPressed:
-                                        () => Get.toNamed(
-                                          AppRoutes.ASSIGN_COUNSELOR,
-                                        ),
+                                    onPressed: () => Get.toNamed(
+                                      AppRoutes.ASSIGN_COUNSELOR,
+                                    ),
                                     child: const Text('HANDLE'),
                                   ),
                                 ],
@@ -165,10 +168,13 @@ class OwnerHomeScreen extends GetView<OwnerController> {
                           Colors.blue,
                           () => Get.toNamed(AppRoutes.UPLOAD_ARTICLE),
                         ),
+                        // Add extra padding at bottom to allow overscroll for refresh
+                        const SizedBox(height: 50),
                       ],
                     ),
                   ),
                 ),
+              ),
       ),
     );
   }

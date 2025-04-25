@@ -4,7 +4,7 @@ import '../../controllers/owner_controller.dart';
 import '../../models/user_model.dart';
 
 class AllCounselorsScreen extends GetView<OwnerController> {
-  AllCounselorsScreen({Key? key}) : super(key: key);
+  AllCounselorsScreen({super.key});
   
   final searchController = TextEditingController();
   final RxString searchQuery = ''.obs;

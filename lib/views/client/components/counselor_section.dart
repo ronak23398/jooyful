@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:jooyful_heaven/controllers/auth_controllers.dart';
 import 'package:jooyful_heaven/models/user_model.dart';
 import 'package:jooyful_heaven/routes/app_routes.dart';
 import 'package:jooyful_heaven/controllers/client_controllers/client_controllers.dart';
+import 'package:jooyful_heaven/services/counsellor_req_service.dart';
+import 'package:jooyful_heaven/services/realtime_db_service.dart';
 
-class CounselorSection extends StatelessWidget {
+class CounselorSection extends StatefulWidget {
+  
   final ClientController controller;
   final UserModel? counselor; 
   final String assignedCounselorId;
@@ -18,6 +22,16 @@ class CounselorSection extends StatelessWidget {
     required this.hasCounselorRequest,
   });
 
+  @override
+  State<CounselorSection> createState() => _CounselorSectionState();
+}
+
+class _CounselorSectionState extends State<CounselorSection> {
+  final RealtimeDbService _dbService = RealtimeDbService();
+  
+  final AuthController _authController = Get.find<AuthController>();
+  bool _isRequestingAppointment = false;
+  
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -41,7 +55,7 @@ class CounselorSection extends StatelessWidget {
               ],
             ),
             SizedBox(height: 16),
-            if (assignedCounselorId.isNotEmpty && counselor != null)
+            if (widget.assignedCounselorId.isNotEmpty && widget.counselor != null)
               // Counselor is assigned
               Column(
                 children: [
@@ -58,7 +72,7 @@ class CounselorSection extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              counselor!.name,
+                              widget.counselor!.name,
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
@@ -83,27 +97,19 @@ class CounselorSection extends StatelessWidget {
                           ),
                           onPressed: () => Get.toNamed(
                             AppRoutes.CHAT_SCREEN,
-                            arguments: {'counselorId': assignedCounselorId}
+                            arguments: {'counselorId': widget.assignedCounselorId}
                           ),
                         ),
                       ),
                       SizedBox(width: 8),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          icon: Icon(Icons.calendar_today),
-                          label: Text('Appointment'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: (){},
-                        ),
+                        child: _buildAppointmentButton(),
                       ),
                     ],
                   ),
                 ],
               )
-            else if (hasCounselorRequest)
+            else if (widget.hasCounselorRequest)
               // Request is pending
               Center(
                 child: Column(
@@ -140,7 +146,7 @@ class CounselorSection extends StatelessWidget {
                     ),
                     SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => controller.requestCounselor(),
+                      onPressed: () => widget.controller.requestCounselor(),
                       child: Text('Request a Counselor'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
@@ -154,5 +160,86 @@ class CounselorSection extends StatelessWidget {
         ),
       ),
     );
+  }
+  
+  Widget _buildAppointmentButton() {
+    // Get the client ID from the auth controller
+    String? clientId = _authController.userModel.value?.uid;
+    
+    // Check if there's an upcoming confirmed appointment
+    Map<String, dynamic>? confirmedAppointment = widget.controller.appointments
+        .firstWhereOrNull((appointment) => 
+            appointment['status'] == 'confirmed' && 
+            _isUpcomingAppointment(appointment['date']));
+    
+    if (confirmedAppointment != null) {
+      // Show confirmed appointment details
+      return ElevatedButton.icon(
+        icon: Icon(Icons.event_available),
+        label: Text('${confirmedAppointment['date']} at ${confirmedAppointment['time']}'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.green,
+          foregroundColor: Colors.white,
+        ),
+        onPressed: null, // Disabled since it's already confirmed
+      );
+    }
+    
+    // Check if there's a pending appointment
+    bool hasPendingAppointment = widget.controller.appointments
+        .any((appointment) => appointment['status'] == 'pending');
+    
+    if (hasPendingAppointment || _isRequestingAppointment) {
+      return ElevatedButton.icon(
+        icon: Icon(Icons.hourglass_bottom),
+        label: Text('Request Pending'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.amber,
+          foregroundColor: Colors.white,
+        ),
+        onPressed: null, // Disabled since it's pending
+      );
+    }
+    
+    // Default: Request Appointment button
+    return ElevatedButton.icon(
+      icon: Icon(Icons.calendar_today),
+      label: Text('Appointment'),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
+      ),
+      onPressed: clientId == null ? null : () async {
+        setState(() {
+          _isRequestingAppointment = true;
+        });
+        
+        try {
+          await CounselorRequestService(_dbService).createCounselorRequest(clientId);
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Appointment request sent successfully!'))
+          );
+        } catch (e) {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to request appointment: $e'))
+          );
+          setState(() {
+            _isRequestingAppointment = false;
+          });
+        }
+      },
+    );
+  }
+  
+  bool _isUpcomingAppointment(String dateString) {
+    try {
+      final appointmentDate = DateTime.parse(dateString);
+      final now = DateTime.now();
+      return appointmentDate.isAfter(now);
+    } catch (e) {
+      return false;
+    }
   }
 }

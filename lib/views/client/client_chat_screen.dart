@@ -3,7 +3,8 @@ import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
 import 'package:jooyful_heaven/controllers/client_controllers/client_chat_controller.dart';
 import 'package:jooyful_heaven/models/chat_model.dart';
-import 'package:intl/intl.dart'; 
+import 'package:intl/intl.dart';
+import 'package:jooyful_heaven/services/whatsapp_service.dart';
 
 class ClientChatScreen extends GetView<ClientChatController> {
   final AuthController authController = Get.find<AuthController>();
@@ -16,6 +17,19 @@ class ClientChatScreen extends GetView<ClientChatController> {
           ? Text('Chat with ${controller.counselor.value!.name}')
           : Text('Chat with Counselor')),
         actions: [
+          // Voice Call Button
+          IconButton(
+            icon: Icon(Icons.call),
+            onPressed: () => _initiateWhatsAppVoiceCall(),
+            tooltip: 'WhatsApp Voice Call',
+          ),
+          // Video Call Button
+          IconButton(
+            icon: Icon(Icons.videocam),
+            onPressed: () => _initiateWhatsAppVideoCall(),
+            tooltip: 'WhatsApp Video Call',
+          ),
+          // Counselor Info Button
           IconButton(
             icon: Icon(Icons.info_outline),
             onPressed: () => _showCounselorInfo(context),
@@ -81,6 +95,62 @@ class ClientChatScreen extends GetView<ClientChatController> {
         ],
       ),
     );
+  }
+  
+  // Updated method for initiating WhatsApp voice call
+  void _initiateWhatsAppVoiceCall() {
+    if (!controller.isCounselorLoaded.value) {
+      Get.snackbar('Cannot Call', 'Counselor information not loaded yet');
+      return;
+    }
+    
+    final counselor = controller.counselor.value;
+    
+    if (counselor != null && counselor.phoneNumber != null) {
+      try {
+        WhatsAppService.launchWhatsAppVoiceCall(counselor.phoneNumber!);
+      } catch (e) {
+        Get.snackbar(
+          'Error', 
+          'Could not initiate WhatsApp call: ${e.toString()}',
+          duration: Duration(seconds: 3)
+        );
+      }
+    } else {
+      Get.snackbar(
+        'Missing Information', 
+        'Counselor phone number is not available',
+        duration: Duration(seconds: 3)
+      );
+    }
+  }
+  
+  // Updated method for initiating WhatsApp video call
+  void _initiateWhatsAppVideoCall() {
+    if (!controller.isCounselorLoaded.value) {
+      Get.snackbar('Cannot Call', 'Counselor information not loaded yet');
+      return;
+    }
+    
+    final counselor = controller.counselor.value;
+    
+    if (counselor != null && counselor.phoneNumber != null) {
+      try {
+        WhatsAppService.launchWhatsAppVideoCall(counselor.phoneNumber!);
+      } catch (e) {
+        Get.snackbar(
+          'Error', 
+          'Could not initiate WhatsApp video call: ${e.toString()}',
+          duration: Duration(seconds: 3)
+        );
+      }
+    } else {
+      Get.snackbar(
+        'Missing Information', 
+        'Counselor phone number is not available',
+        duration: Duration(seconds: 3)
+      );
+    }
   }
   
   Widget _buildEmptyChatMessage() {
@@ -303,6 +373,40 @@ class ClientChatScreen extends GetView<ClientChatController> {
                 Chip(label: Text('Anxiety')),
                 Chip(label: Text('Depression')),
                 Chip(label: Text('Stress Management')),
+              ],
+            ),
+            // Add WhatsApp call buttons in the bottom sheet as well
+            SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  icon: Icon(Icons.call),
+                  label: Text('WhatsApp Call'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _initiateWhatsAppVoiceCall();
+                  },
+                ),
+                SizedBox(width: 16),
+                ElevatedButton.icon(
+                  icon: Icon(Icons.videocam),
+                  label: Text('WhatsApp Video'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _initiateWhatsAppVideoCall();
+                  },
+                ),
               ],
             ),
           ],

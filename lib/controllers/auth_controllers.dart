@@ -78,8 +78,8 @@ class AuthController extends GetxController {
     }
   }
 
-  // Sign up with email
-  Future<void> signup(String name, String email, String password) async {
+  // Sign up with email - updated to include phone number
+  Future<void> signup(String name, String email, String password, String phoneNumber) async {
     try {
       isLoading.value = true;
       
@@ -94,6 +94,7 @@ class AuthController extends GetxController {
           uid: user.uid,
           name: name,
           email: email,
+          phoneNumber: phoneNumber, // Added phone number
           role: selectedRole.value,
           createdAt: DateTime.now(),
         );

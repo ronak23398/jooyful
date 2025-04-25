@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:jooyful_heaven/bindings/auth_binding.dart';
 import 'package:jooyful_heaven/bindings/client_binding.dart';
 import 'package:jooyful_heaven/bindings/counsellor_binding.dart';
+import 'package:jooyful_heaven/bindings/intern_binding.dart';
 import 'package:jooyful_heaven/bindings/owner_binding.dart';
 import 'package:jooyful_heaven/controllers/article_controller.dart';
 import 'package:jooyful_heaven/controllers/client_controllers/client_chat_controller.dart';
@@ -16,6 +17,7 @@ import 'package:jooyful_heaven/views/counsellor/counsellor_appointment_screen.da
 import 'package:jooyful_heaven/views/counsellor/counsellor_chat_screen.dart';
 import 'package:jooyful_heaven/views/counsellor/counsellor_home_screen.dart';
 import 'package:jooyful_heaven/views/counsellor/list_of_clients_screen.dart';
+import 'package:jooyful_heaven/views/intern/intern_home_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_clients_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_counsellors_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_interns_screen.dart';
@@ -163,10 +165,10 @@ GetPage(
         Get.lazyPut<ClientChatController>(() => ClientChatController());
       }),
     ),
-  // GetPage(
-  //   name: AppRoutes.INTERN_HOME,
-  //   page: () => InternHomeScreen(),
-  //   binding: InternBinding(),
-  // ),
+  GetPage(
+    name: AppRoutes.INTERN_HOME,
+    page: () => InternHomePage(),
+    binding: InternBindings(),
+  ),
   // Add more pages here
 ];
