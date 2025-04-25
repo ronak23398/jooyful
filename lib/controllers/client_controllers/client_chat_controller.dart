@@ -25,6 +25,7 @@ class ClientChatController extends GetxController {
   String? _counselorId;
   StreamSubscription? _chatSubscription;
   StreamSubscription? _typingSubscription;
+  bool _isInitialized = false;
 
   // Add this method to cancel all listeners
   void cancelAllListeners() {
@@ -41,23 +42,55 @@ class ClientChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    
+    // Initialize with basic data first
     _clientId = _authController.userModel.value?.uid;
     _counselorId = Get.arguments?['counselorId'];
 
     if (_clientId != null && _counselorId != null) {
-      loadCounselorData();
-      loadChatMessages();
-      setupMessageListener();
+      // Load basic UI first, then proceed with data loading
+      Future.microtask(() => _initializeChat());
     } else {
       Get.snackbar('Error', 'Something went wrong. Please try again.');
       Get.back();
     }
+    
+    // Keep the listener for efficient background updates
+    messageController.addListener(_onMessageChanged);
+  }
+
+  // Add this method back for the UI's onChanged handler
+  void updateCanSendMessage() {
+    canSendMessage.value = messageController.text.trim().isNotEmpty;
+  }
+
+  // Move initialization logic to a separate method
+  Future<void> _initializeChat() async {
+    if (_isInitialized) return;
+    _isInitialized = true;
+    
+    try {
+      // Start loading counselor data (don't await)
+      loadCounselorData();
+      
+      // Load messages (await this since we need them first)
+      await loadChatMessages();
+      
+      // Setup listener after messages are loaded
+      Future.microtask(() => setupMessageListener());
+    } catch (e) {
+      print("Error initializing chat: $e");
+    }
+  }
+
+  void _onMessageChanged() {
+    canSendMessage.value = messageController.text.trim().isNotEmpty;
   }
 
   @override
   void onClose() {
+    messageController.removeListener(_onMessageChanged);
     messageController.dispose();
-
     cancelAllListeners();
     super.onClose();
   }
@@ -71,7 +104,8 @@ class ClientChatController extends GetxController {
         isCounselorLoaded.value = true;
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load counselor data: ${e.toString()}');
+      print('Failed to load counselor data: ${e.toString()}');
+      // Don't show snackbar for background operations
     }
   }
 
@@ -80,26 +114,30 @@ class ClientChatController extends GetxController {
       isLoading.value = true;
 
       if (_clientId != null && _counselorId != null) {
-        // Mark messages as read first
-        await ChatService(
-          _dbService,
-        ).markMessagesAsRead(_clientId!, _counselorId!, _clientId!);
+        // Mark messages as read in background
+        Future.microtask(() => ChatService(
+              _dbService,
+            ).markMessagesAsRead(_clientId!, _counselorId!, _clientId!));
 
-        // Then load messages
+        // Load messages without waiting for mark-as-read operation
         List<Map<String, dynamic>> chatData = await ChatService(
           _dbService,
         ).getChatMessages(_clientId!, _counselorId!);
 
-        // Convert to ChatModel objects and sort by timestamp (newest first)
-        List<ChatModel> chatMessages =
-            chatData
-                .map((map) => ChatModel.fromMap(map, map['id'] ?? ''))
-                .toList();
+        // Do conversion in a compute-isolated task if possible
+        // For now, do it in a microtask
+        Future.microtask(() {
+          // Convert to ChatModel objects and sort by timestamp (newest first)
+          List<ChatModel> chatMessages = chatData
+              .map((map) => ChatModel.fromMap(map, map['id'] ?? ''))
+              .toList();
 
-        chatMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        messages.value = chatMessages;
+          chatMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          messages.value = chatMessages;
+        });
       }
     } catch (e) {
+      print('Failed to load messages: ${e.toString()}');
       Get.snackbar('Error', 'Failed to load messages: ${e.toString()}');
     } finally {
       isLoading.value = false;
@@ -110,40 +148,41 @@ class ClientChatController extends GetxController {
     if (_clientId != null && _counselorId != null) {
       String chatId = "${_clientId}_${_counselorId}";
 
-      FirebaseDatabase.instance
+      // Cancel any existing subscription
+      _chatSubscription?.cancel();
+      
+      _chatSubscription = FirebaseDatabase.instance
           .ref()
           .child('chats')
           .child(chatId)
           .onChildAdded
           .listen((event) {
-            // Process new message
-            if (event.snapshot.exists) {
-              Map<dynamic, dynamic> value =
-                  event.snapshot.value as Map<dynamic, dynamic>;
-              value['id'] = event.snapshot.key;
-              ChatModel newMessage = ChatModel.fromMap(
-                Map<String, dynamic>.from(value),
-                value['id'],
-              );
+            // Process new message in a microtask to prevent UI block
+            Future.microtask(() {
+              if (event.snapshot.exists) {
+                Map<dynamic, dynamic> value =
+                    event.snapshot.value as Map<dynamic, dynamic>;
+                value['id'] = event.snapshot.key;
+                ChatModel newMessage = ChatModel.fromMap(
+                  Map<String, dynamic>.from(value),
+                  value['id'],
+                );
 
-              // Add to messages list if not already there
-              if (!messages.any((msg) => msg.id == newMessage.id)) {
-                messages.insert(0, newMessage);
+                // Add to messages list if not already there
+                if (!messages.any((msg) => msg.id == newMessage.id)) {
+                  messages.insert(0, newMessage);
 
-                // Mark as read if from the other person
-                if (newMessage.senderId != _clientId) {
-                  ChatService(
-                    _dbService,
-                  ).markMessagesAsRead(_clientId!, _counselorId!, _clientId!);
+                  // Mark as read if from the other person (in background)
+                  if (newMessage.senderId != _clientId) {
+                    ChatService(
+                      _dbService,
+                    ).markMessagesAsRead(_clientId!, _counselorId!, _clientId!);
+                  }
                 }
               }
-            }
+            });
           });
     }
-  }
-
-  void updateCanSendMessage() {
-    canSendMessage.value = messageController.text.trim().isNotEmpty;
   }
 
   Future<void> sendMessage() async {
@@ -161,12 +200,6 @@ class ClientChatController extends GetxController {
       ).saveChatMessage(_clientId!, _counselorId!, _clientId!, text);
     } catch (e) {
       Get.snackbar('Error', 'Failed to send message: ${e.toString()}');
-      // Remove the optimistically added message if there was an error
-      messages.removeWhere(
-        (msg) =>
-            msg.text == text &&
-            msg.timestamp.difference(DateTime.now()).inSeconds < 5,
-      );
     }
   }
 }

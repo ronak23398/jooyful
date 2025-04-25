@@ -29,6 +29,10 @@ class ClientBinding implements Bindings {
       () => ClientController(),
       fenix: true,
     );
+    Get.lazyPut<ClientController>(
+      () => ClientController(),
+      fenix: true,
+    );
   }
 
   

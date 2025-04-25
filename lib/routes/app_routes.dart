@@ -13,6 +13,7 @@ import 'package:jooyful_heaven/services/firebase_auth_service.dart';
 import 'package:jooyful_heaven/services/realtime_db_service.dart';
 import 'package:jooyful_heaven/views/client/client_chat_screen.dart';
 import 'package:jooyful_heaven/views/client/client_home_screen.dart';
+import 'package:jooyful_heaven/views/client/view_client_appointment_screen.dart';
 import 'package:jooyful_heaven/views/counsellor/counsellor_appointment_screen.dart';
 import 'package:jooyful_heaven/views/counsellor/counsellor_chat_screen.dart';
 import 'package:jooyful_heaven/views/counsellor/counsellor_home_screen.dart';
@@ -44,6 +45,7 @@ class AppRoutes {
   static const ASSIGN_COUNSELOR = '/assign_counselor';
   static const UPLOAD_ARTICLE = '/upload_article';
   static const TEST_SCREEN = '/TEST_SCREEN';
+  static const CLIENT_VIEW_APPOINTMENTS = '/clientappointments';
   
   // New routes from CounselorHomeScreen
   static const LIST_OF_CLIENTS = '/listofClients';
@@ -140,6 +142,16 @@ GetPage(
     ));
   }),
 ),
+GetPage(
+      name: AppRoutes.CLIENT_VIEW_APPOINTMENTS,
+      page: () => ClientViewAppointmentScreen(),
+      binding: BindingsBuilder(() {
+        // Controller should already be initialized in the main client binding
+        // If not, add: Get.put(ClientController());
+      }),
+      transition: Transition.fadeIn,
+    ),
+
 GetPage(
   name: AppRoutes.UPCOMING_APPOINTMENTS,
   page: () => ViewAppointmentsScreen(), // You'll need to create this screen

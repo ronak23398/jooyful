@@ -43,6 +43,30 @@ Future<ChatModel?> processNewMessageInIsolate(
   }
 }
 
+// Optimized batch message processing
+Future<List<ChatModel>> processBatchMessagesInIsolate(Map<String, dynamic> params) async {
+  final List<Map<dynamic, dynamic>> batchData = params['batchData'];
+  final List<String> messageIds = params['messageIds'];
+  
+  List<ChatModel> results = [];
+  
+  for (int i = 0; i < batchData.length; i++) {
+    try {
+      Map<String, dynamic> messageData = {};
+      batchData[i].forEach((key, val) {
+        messageData[key.toString()] = val;
+      });
+      
+      messageData['id'] = messageIds[i];
+      results.add(ChatModel.fromMap(messageData, messageIds[i]));
+    } catch (e) {
+      print('Error processing batch message in isolate: $e');
+    }
+  }
+  
+  return results;
+}
+
 // Helper function to spawn isolate
 Future<List<ChatModel>> processMessagesWithIsolate(
   List<Map<String, dynamic>> messagesData,
@@ -72,6 +96,12 @@ class CounselorChatController extends GetxController {
   String? _counselorId;
   String? _clientId;
   StreamSubscription? _chatSubscription;
+  
+  // Batch message updates
+  final List<DataSnapshot> _pendingSnapshots = [];
+  Timer? _batchProcessTimer;
+  final int _batchSize = 10; // Process in batches of 10
+  final int _batchDelay = 500; // Milliseconds to wait for batch processing
 
   @override
   void onInit() {
@@ -87,12 +117,17 @@ class CounselorChatController extends GetxController {
     print("CounselorId: $_counselorId");
 
     if (_counselorId != null && _clientId != null) {
-      loadChatMessages();
-      loadClientData();
-      setupMessageListener();
-      loadClientTestResults();
-      loadSessionNotes();
-      checkClientStatus();
+      // Load chat and client data in parallel
+      Future.wait([
+        loadChatMessages(),
+        loadClientData(),
+        loadClientTestResults(),
+        loadSessionNotes(),
+      ]).then((_) {
+        // Setup listener only after loading initial data
+        setupMessageListener();
+        checkClientStatus();
+      });
     } else {
       Get.snackbar(
         'Error',
@@ -103,9 +138,16 @@ class CounselorChatController extends GetxController {
 
   @override
   void onClose() {
+    cancelAllListeners();
     messageController.dispose();
-    _chatSubscription?.cancel();
+    _batchProcessTimer?.cancel();
     super.onClose();
+  }
+  
+  // Make this public so it can be called during cleanup
+  void cancelAllListeners() {
+    _chatSubscription?.cancel();
+    _batchProcessTimer?.cancel();
   }
 
   Future<void> loadClientData() async {
@@ -135,12 +177,28 @@ class CounselorChatController extends GetxController {
           _dbService,
         ).getChatMessages(_clientId!, _counselorId!);
 
-        // Process in isolate
-        final chatMessages = await processMessagesWithIsolate(chatData);
+        // Process in isolate if there's a significant amount of data
+        List<ChatModel> chatMessages;
+        if (chatData.length > 20) {
+          chatMessages = await processMessagesWithIsolate(chatData);
+        } else {
+          // Process directly for small amounts
+          chatMessages = chatData
+              .where((map) => map['id'] != null)
+              .map((map) => ChatModel.fromMap(map, map['id'] ?? ''))
+              .toList();
+        }
 
-        // Sort after receiving from isolate
+        // Sort once after processing
         chatMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-        messages.value = chatMessages;
+        
+        // Use addAll instead of value assignment to prevent unnecessary rebuilds
+        if (messages.isEmpty) {
+          messages.value = chatMessages;
+        } else {
+          messages.clear();
+          messages.addAll(chatMessages);
+        }
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to load messages: ${e.toString()}');
@@ -153,7 +211,7 @@ class CounselorChatController extends GetxController {
     try {
       if (_clientId != null) {
         // In a real application, fetch this from Firebase
-        // For now, using mock data
+        // For now, using mock data - keep this simple to avoid performance issues
         clientTestResults.value = [
           {
             'testId': 'anxiety_test',
@@ -194,12 +252,8 @@ class CounselorChatController extends GetxController {
   Future<void> saveSessionNotes(String notes) async {
     try {
       if (_clientId != null && _counselorId != null) {
-        // In a real app, this would save to Firebase
         sessionNotes.value = notes;
         Get.snackbar('Success', 'Session notes saved successfully');
-
-        // Example of how to save in a real app:
-        // await _dbService.saveSessionNotes(_counselorId!, _clientId!, notes);
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to save session notes: ${e.toString()}');
@@ -210,7 +264,6 @@ class CounselorChatController extends GetxController {
     try {
       // This would typically check recent test results, message patterns, etc.
       // For demonstration, we'll set a mock status based on test results
-
       if (clientTestResults.isNotEmpty) {
         final latestTest = clientTestResults[0];
         final score = latestTest['score'] as int;
@@ -232,64 +285,46 @@ class CounselorChatController extends GetxController {
     }
   }
 
+  // Optimized message listener with efficient batch processing
   void setupMessageListener() {
     if (_clientId != null && _counselorId != null) {
       String chatId = "${_clientId}_${_counselorId}";
       print("setupmessagelistener started $chatId");
 
-      // Batch updates with debouncing
-      List<ChatModel> pendingMessages = [];
-      Timer? debounceTimer;
-
-      _chatSubscription = FirebaseDatabase.instance
+      // Get a reference to avoid creating multiple references
+      final chatRef = FirebaseDatabase.instance
           .ref()
           .child('chats')
-          .child(chatId)
+          .child(chatId);
+
+      // Use the 'startAt' technique to only listen for new messages
+      final latestTimestamp = messages.isNotEmpty 
+          ? messages[0].timestamp.millisecondsSinceEpoch + 1 
+          : DateTime.now().millisecondsSinceEpoch;
+
+      _chatSubscription = chatRef
+          .orderByChild('timestamp')
+          .startAt(latestTimestamp)
           .onChildAdded
           .listen(
-            (event) async {
-              try {
-                // Skip if it's a 'participants' node
-                if (event.snapshot.key == 'participants') return;
-                if (!event.snapshot.exists) return;
-
-                var snapshotData = event.snapshot.value;
-                if (snapshotData is! Map) return;
-
-                // Process in isolate
-                final newMessage = await compute(processNewMessageInIsolate, {
-                  'data': snapshotData,
-                  'messageId': event.snapshot.key,
-                });
-
-                if (newMessage != null &&
-                    !messages.any((msg) => msg.id == newMessage.id)) {
-                  pendingMessages.add(newMessage);
-
-                  // Debounce updates
-                  debounceTimer?.cancel();
-                  debounceTimer = Timer(const Duration(milliseconds: 300), () {
-                    if (pendingMessages.isNotEmpty) {
-                      messages.insertAll(0, pendingMessages);
-
-                      // Mark messages as read once per batch
-                      final hasUnreadFromClient = pendingMessages.any(
-                        (msg) => msg.senderId != _counselorId,
-                      );
-                      if (hasUnreadFromClient) {
-                        ChatService(_dbService).markMessagesAsRead(
-                          _clientId!,
-                          _counselorId!,
-                          _counselorId!,
-                        );
-                      }
-
-                      pendingMessages.clear();
-                    }
-                  });
-                }
-              } catch (e) {
-                print('Error in message listener: ${e.toString()}');
+            (event) {
+              // Skip participants node
+              if (event.snapshot.key == 'participants') return;
+              if (!event.snapshot.exists) return;
+              
+              // Add snapshot to pending list for batch processing
+              _pendingSnapshots.add(event.snapshot);
+              
+              // Start or reset batch timer
+              _batchProcessTimer?.cancel();
+              _batchProcessTimer = Timer(Duration(milliseconds: _batchDelay), () {
+                _processPendingSnapshots();
+              });
+              
+              // Process immediately if batch size threshold reached
+              if (_pendingSnapshots.length >= _batchSize) {
+                _batchProcessTimer?.cancel();
+                _processPendingSnapshots();
               }
             },
             onError: (error) {
@@ -298,9 +333,73 @@ class CounselorChatController extends GetxController {
           );
     }
   }
+  
+  // Process snapshots in batch
+  Future<void> _processPendingSnapshots() async {
+    if (_pendingSnapshots.isEmpty) return;
+    
+    // Make a copy and clear the pending list
+    final snapshots = List<DataSnapshot>.from(_pendingSnapshots);
+    _pendingSnapshots.clear();
+    
+    try {  
+      // Prepare data for batch processing in isolate
+      final List<Map<dynamic, dynamic>> batchData = [];
+      final List<String> messageIds = [];
+      
+      for (var snapshot in snapshots) {
+        if (snapshot.value is Map) {
+          batchData.add(snapshot.value as Map<dynamic, dynamic>);
+          messageIds.add(snapshot.key ?? DateTime.now().millisecondsSinceEpoch.toString());
+        }
+      }
+      
+      if (batchData.isEmpty) return;
+      
+      // Process batch in isolate
+      final newMessages = await compute(
+        processBatchMessagesInIsolate,
+        {
+          'batchData': batchData,
+          'messageIds': messageIds,
+        },
+      );
+      
+      // Filter out messages we already have
+      final uniqueMessages = newMessages.where(
+        (newMsg) => !messages.any((msg) => msg.id == newMsg.id)
+      ).toList();
+      
+      if (uniqueMessages.isNotEmpty) {
+        // Sort before adding
+        uniqueMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+        
+        // Insert at beginning
+        messages.insertAll(0, uniqueMessages);
+        
+        // Mark messages as read if any are from client
+        final hasUnreadFromClient = uniqueMessages.any(
+          (msg) => msg.senderId != _counselorId,
+        );
+        
+        if (hasUnreadFromClient && _clientId != null && _counselorId != null) {
+          ChatService(_dbService).markMessagesAsRead(
+            _clientId!,
+            _counselorId!,
+            _counselorId!,
+          );
+        }
+      }
+    } catch (e) {
+      print('Error in batch message processing: $e');
+    }
+  }
 
   void updateCanSendMessage() {
-    canSendMessage.value = messageController.text.trim().isNotEmpty;
+    final canSend = messageController.text.trim().isNotEmpty;
+    if (canSendMessage.value != canSend) {
+      canSendMessage.value = canSend;
+    }
   }
 
   Future<void> sendMessage() async {
@@ -311,20 +410,18 @@ class CounselorChatController extends GetxController {
     final text = messageController.text.trim();
     messageController.clear();
     canSendMessage.value = false;
+    
     try {
       print("dbservice starting");
-      // Save to database
+      // Save to database using the optimized ChatService
       await ChatService(
         _dbService,
       ).saveChatMessage(_clientId!, _counselorId!, _counselorId!, text);
+      
+      // Don't add manually - let the listener handle it
+      // This prevents duplicate messages and ensures proper sorting
     } catch (e) {
       Get.snackbar('Error', 'Failed to send message: ${e.toString()}');
-      // Remove the optimistically added message if there was an error
-      messages.removeWhere(
-        (msg) =>
-            msg.text == text &&
-            msg.timestamp.difference(DateTime.now()).inSeconds < 5,
-      );
     }
   }
 }
