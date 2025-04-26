@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:jooyful_heaven/models/article_model.dart';
+import 'package:jooyful_heaven/routes/app_routes.dart';
 
 class ArticlesSection extends StatelessWidget {
   final List<ArticleModel> articles;
@@ -24,6 +26,12 @@ class ArticlesSection extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            TextButton(
+              onPressed: () {
+                Get.toNamed(AppRoutes.ALL_ARTICLES);
+              },
+              child: Text('View All'),
+            ),
           ],
         ),
         SizedBox(height: 8),
@@ -42,12 +50,22 @@ class ArticlesSection extends StatelessWidget {
                       backgroundColor: Colors.green.shade100,
                       child: Icon(Icons.article, color: Colors.green),
                     ),
-                    title: Text(article.title),
+                    title: Text(
+                      article.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                     subtitle: Text(
                       article.category,
                       style: TextStyle(color: Colors.grey),
                     ),
                     trailing: Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () {
+                      Get.toNamed(
+                        AppRoutes.ARTICLE_DETAIL,
+                        arguments: article,
+                      );
+                    },
                   ),
                 );
               },

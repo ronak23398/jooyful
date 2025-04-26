@@ -52,7 +52,7 @@ class ClientHomeScreen extends GetView<ClientController> {
                   SizedBox(height: 20),
                   
                   // Psychological Tests section
-                  TestsSection(tests: controller.tests),
+                  TestsSection(),
                   
                   SizedBox(height: 20),
                   

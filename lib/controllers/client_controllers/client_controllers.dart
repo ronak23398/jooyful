@@ -73,8 +73,7 @@ class ClientController extends GetxController {
         // This is critical minimal data we need right away
         assignedCounselorId.value = userData.assignedCounselorId ?? '';
         
-        // Load tests (mocked data - very fast)
-        await loadTests();
+        
         
         // Check counselor request (optimized method)
         await checkCounselorRequest(userData.uid);
@@ -108,7 +107,6 @@ class ClientController extends GetxController {
     // These are least critical - load last
     _pendingTasks.add(_loadArticlesInBatches());
     _pendingTasks.add(_loadAppointmentsData(userData.uid));
-    _pendingTasks.add(_loadTestResultsData(userData.uid));
   }
 
   Future<void> _loadCounselorData() async {
@@ -189,31 +187,7 @@ class ClientController extends GetxController {
   }
 }
 
-  Future<void> _loadTestResultsData(String userId) async {
-    try {
-      // Mocking test results for now
-      testResults.value = [
-        {
-          'testId': 'anxiety_test',
-          'testName': 'Anxiety Assessment',
-          'score': 7,
-          'maxScore': 20,
-          'date': '2025-04-10',
-          'counselorComment': 'Your anxiety appears to be mild. We can discuss coping strategies in our next session.',
-        },
-        {
-          'testId': 'depression_test',
-          'testName': 'Depression Screening',
-          'score': 12,
-          'maxScore': 30,
-          'date': '2025-04-05',
-          'counselorComment': null,
-        },
-      ];
-    } catch (e) {
-      print("Error loading test results: $e");
-    }
-  }
+ 
 
   // Original methods with optimizations
 
@@ -238,34 +212,7 @@ class ClientController extends GetxController {
     await _loadArticlesInBatches();
   }
 
-  Future<void> loadTests() async {
-    try {
-      // This would typically come from Firebase
-      // Mocking the tests for now
-      tests.value = [
-        {
-          'id': 'anxiety_test',
-          'title': 'Anxiety Assessment',
-          'description': 'Evaluate your anxiety levels',
-          'questions': 10,
-        },
-        {
-          'id': 'depression_test',
-          'title': 'Depression Screening',
-          'description': 'Screen for depression symptoms',
-          'questions': 15,
-        },
-        {
-          'id': 'stress_test',
-          'title': 'Stress Measurement',
-          'description': 'Measure your current stress levels',
-          'questions': 12,
-        },
-      ];
-    } catch (e) {
-      print("Error loading tests: $e");
-    }
-  }
+  
 
   Future<void> checkCounselorRequest(String userId) async {
     try {
@@ -322,9 +269,7 @@ class ClientController extends GetxController {
     await _loadAppointmentsData(userId);
   }
 
-  Future<void> loadTestResults(String userId) async {
-    await _loadTestResultsData(userId);
-  }
+  
 
   Future<void> saveTestResult(String testId, String testName, int score, int maxScore) async {
     try {

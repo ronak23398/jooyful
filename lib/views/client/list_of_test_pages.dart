@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:get/get.dart';
 import 'package:jooyful_heaven/models/psychological_test_model.dart';
-import 'package:jooyful_heaven/views/owner/attempt_test_page.dart';
+import 'package:jooyful_heaven/routes/app_routes.dart';
+import 'package:jooyful_heaven/views/client/attempt_test_page.dart';
 
 class ListOfTestsPage extends StatefulWidget {
-  const ListOfTestsPage({Key? key}) : super(key: key);
+  const ListOfTestsPage({super.key});
 
   @override
   _ListOfTestsPageState createState() => _ListOfTestsPageState();
@@ -95,13 +97,12 @@ class _ListOfTestsPageState extends State<ListOfTestsPage> {
                       margin: const EdgeInsets.only(bottom: 16),
                       child: InkWell(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AttemptTestPage(test: test),
-                            ),
+                          Get.toNamed(
+                            AppRoutes.TEST_SCREEN,
+                            arguments: {'testId': test.id, 'test': test},
                           );
                         },
+
                         child: Padding(
                           padding: const EdgeInsets.all(16),
                           child: Column(

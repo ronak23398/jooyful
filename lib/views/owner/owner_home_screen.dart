@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:jooyful_heaven/controllers/auth_controllers.dart';
-import 'package:jooyful_heaven/views/owner/create_test_page.dart';
-import 'package:jooyful_heaven/views/owner/list_of_test_pages.dart';
 import '../../controllers/owner_controller.dart';
 import '../../routes/app_routes.dart';
 
@@ -67,18 +65,6 @@ class OwnerHomeScreen extends GetView<OwnerController> {
 
                           const SizedBox(height: 24),
                           
-                              ElevatedButton(
-                                onPressed: () {
-                                  Get.to(() => ListOfTestsPage());
-                                },
-                                child: Text("list of test"),
-                              ),
-                              ElevatedButton(
-                                onPressed: () {
-                                  Get.to(() => CreateTestPage());
-                                },
-                                child: Text("create test"),
-                              ),
                               
                             
                           
@@ -188,6 +174,13 @@ class OwnerHomeScreen extends GetView<OwnerController> {
                             Icons.upload_file,
                             Colors.blue,
                             () => Get.toNamed(AppRoutes.UPLOAD_ARTICLE),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildActionButton(
+                            'View all Tests',
+                            Icons.book,
+                            Colors.blue,
+                            () => Get.toNamed(AppRoutes.LIST_OF_TESTS),
                           ),
                           // Add extra padding at bottom to allow overscroll for refresh
                           const SizedBox(height: 50),

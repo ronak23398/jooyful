@@ -11,8 +11,11 @@ import 'package:jooyful_heaven/controllers/counsellor/counsellor_controller.dart
 import 'package:jooyful_heaven/controllers/owner_controller.dart';
 import 'package:jooyful_heaven/services/firebase_auth_service.dart';
 import 'package:jooyful_heaven/services/realtime_db_service.dart';
+import 'package:jooyful_heaven/views/client/all_articles_page.dart';
+import 'package:jooyful_heaven/views/client/articles_detail_page.dart';
 import 'package:jooyful_heaven/views/client/client_chat_screen.dart';
 import 'package:jooyful_heaven/views/client/client_home_screen.dart';
+import 'package:jooyful_heaven/views/client/list_of_test_pages.dart';
 import 'package:jooyful_heaven/views/client/view_client_appointment_screen.dart';
 import 'package:jooyful_heaven/views/counsellor/counsellor_appointment_screen.dart';
 import 'package:jooyful_heaven/views/counsellor/counsellor_chat_screen.dart';
@@ -23,6 +26,7 @@ import 'package:jooyful_heaven/views/owner/all_clients_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_counsellors_screen.dart';
 import 'package:jooyful_heaven/views/owner/all_interns_screen.dart';
 import 'package:jooyful_heaven/views/owner/assign_counsellor_screen.dart';
+import 'package:jooyful_heaven/views/owner/create_test_page.dart';
 import 'package:jooyful_heaven/views/owner/owner_home_screen.dart';
 import 'package:jooyful_heaven/views/owner/upload_article_screen.dart';
 import '../views/auth/login_screen.dart';
@@ -34,9 +38,11 @@ class AppRoutes {
   static const SIGNUP = '/signup';
   static const OWNER_HOME = '/owner_home';
   static const CLIENT_HOME = '/client_home';
-   static const String CHAT_SCREEN = '/chat_screen';
+  static const String CHAT_SCREEN = '/chat_screen';
   static const COUNSELOR_HOME = '/counselor_home';
   static const INTERN_HOME = '/intern_home';
+  static const LIST_OF_TESTS = '/listoftest';
+  static const CREATE_TESTS = '/createtest';
 
   // Add more routes as needed
   static const ALL_CLIENTS = '/all_clients';
@@ -46,12 +52,16 @@ class AppRoutes {
   static const UPLOAD_ARTICLE = '/upload_article';
   static const TEST_SCREEN = '/TEST_SCREEN';
   static const CLIENT_VIEW_APPOINTMENTS = '/clientappointments';
-  
+
   // New routes from CounselorHomeScreen
   static const LIST_OF_CLIENTS = '/listofClients';
   static const COUNSELOR_VIEW_APPOINTMENTS = '/counselor/appointments';
   static const UPCOMING_APPOINTMENTS = '/upcoming_appointments';
   static const COUNSELLOR_CHAT = '/counselor/chat';
+
+  // New routes for articles
+  static const ALL_ARTICLES = '/all_articles';
+  static const ARTICLE_DETAIL = '/article_detail';
 }
 
 // Define pages with bindings
@@ -76,111 +86,136 @@ final appPages = [
     page: () => ClientHomeScreen(),
     binding: ClientBinding(),
   ),
-   GetPage(
-      name: AppRoutes.ASSIGN_COUNSELOR, 
-      page: () => AssignCounselorScreen(),
-      binding: BindingsBuilder(() {
-        // Make sure OwnerController is available
-        Get.lazyPut<OwnerController>(() => OwnerController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.ALL_CLIENTS, 
-      page: () => AllClientsScreen(),
-      binding: BindingsBuilder(() {
-        // Make sure OwnerController is available
-        Get.lazyPut<OwnerController>(() => OwnerController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.ALL_COUNSELORS, 
-      page: () => AllCounselorsScreen(),
-      binding: BindingsBuilder(() {
-        // Make sure OwnerController is available
-        Get.lazyPut<OwnerController>(() => OwnerController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.ALL_INTERNS, 
-      page: () => AllInternsScreen(),
-      binding: BindingsBuilder(() {
-        // Make sure OwnerController is available
-        Get.lazyPut<OwnerController>(() => OwnerController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.UPLOAD_ARTICLE, 
-      page: () => UploadArticleScreen(),
-      binding: BindingsBuilder(() {
-        // Make sure OwnerController is available
-        Get.lazyPut<OwnerController>(() => OwnerController());
-        Get.lazyPut<ArticleController>(() => ArticleController());
-      }),
-    ),
+  GetPage(
+    name: AppRoutes.ASSIGN_COUNSELOR,
+    page: () => AssignCounselorScreen(),
+    binding: BindingsBuilder(() {
+      // Make sure OwnerController is available
+      Get.lazyPut<OwnerController>(() => OwnerController());
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.ALL_CLIENTS,
+    page: () => AllClientsScreen(),
+    binding: BindingsBuilder(() {
+      // Make sure OwnerController is available
+      Get.lazyPut<OwnerController>(() => OwnerController());
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.ALL_COUNSELORS,
+    page: () => AllCounselorsScreen(),
+    binding: BindingsBuilder(() {
+      // Make sure OwnerController is available
+      Get.lazyPut<OwnerController>(() => OwnerController());
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.ALL_INTERNS,
+    page: () => AllInternsScreen(),
+    binding: BindingsBuilder(() {
+      // Make sure OwnerController is available
+      Get.lazyPut<OwnerController>(() => OwnerController());
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.UPLOAD_ARTICLE,
+    page: () => UploadArticleScreen(),
+    binding: BindingsBuilder(() {
+      // Make sure OwnerController is available
+      Get.lazyPut<OwnerController>(() => OwnerController());
+      Get.lazyPut<ArticleController>(() => ArticleController());
+    }),
+  ),
   GetPage(
     name: AppRoutes.COUNSELOR_HOME,
     page: () => CounselorHomeScreen(),
     binding: CounselorBinding(),
   ),
-   GetPage(
-  name: AppRoutes.LIST_OF_CLIENTS,
-  page: () => MyClientsScreen(), // You'll need to create this screen
-  binding: BindingsBuilder(() {
-    Get.lazyPut<CounselorController>(() => CounselorController(
-      authService: Get.find<FirebaseAuthService>(),
-      dbService: Get.find<RealtimeDbService>(),
-    ));
-  }),
-),
-GetPage(
-  name: AppRoutes.COUNSELOR_VIEW_APPOINTMENTS,
-  page: () => ViewAppointmentsScreen(), // You'll need to create this screen
-  binding: BindingsBuilder(() {
-    Get.lazyPut<CounselorController>(() => CounselorController(
-      authService: Get.find<FirebaseAuthService>(),
-      dbService: Get.find<RealtimeDbService>(),
-    ));
-  }),
-),
-GetPage(
-      name: AppRoutes.CLIENT_VIEW_APPOINTMENTS,
-      page: () => ClientViewAppointmentScreen(),
-      binding: BindingsBuilder(() {
-        // Controller should already be initialized in the main client binding
-        // If not, add: Get.put(ClientController());
-      }),
-      transition: Transition.fadeIn,
-    ),
+  GetPage(
+    name: AppRoutes.LIST_OF_CLIENTS,
+    page: () => MyClientsScreen(), // You'll need to create this screen
+    binding: BindingsBuilder(() {
+      Get.lazyPut<CounselorController>(
+        () => CounselorController(
+          authService: Get.find<FirebaseAuthService>(),
+          dbService: Get.find<RealtimeDbService>(),
+        ),
+      );
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.COUNSELOR_VIEW_APPOINTMENTS,
+    page: () => ViewAppointmentsScreen(), // You'll need to create this screen
+    binding: BindingsBuilder(() {
+      Get.lazyPut<CounselorController>(
+        () => CounselorController(
+          authService: Get.find<FirebaseAuthService>(),
+          dbService: Get.find<RealtimeDbService>(),
+        ),
+      );
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.CLIENT_VIEW_APPOINTMENTS,
+    page: () => ClientViewAppointmentScreen(),
+    binding: BindingsBuilder(() {
+      // Controller should already be initialized in the main client binding
+      // If not, add: Get.put(ClientController());
+    }),
+    transition: Transition.fadeIn,
+  ),
 
-GetPage(
-  name: AppRoutes.UPCOMING_APPOINTMENTS,
-  page: () => ViewAppointmentsScreen(), // You'll need to create this screen
-  binding: BindingsBuilder(() {
-    Get.lazyPut<CounselorController>(() => CounselorController(
-      authService: Get.find<FirebaseAuthService>(),
-      dbService: Get.find<RealtimeDbService>(),
-    ));
-  }),
-),
-GetPage(
-  name: AppRoutes.COUNSELLOR_CHAT,
-  page: () => CounselorChatScreen(),
-  binding: BindingsBuilder(() {
-    // Use put() instead of lazyPut() to ensure immediate initialization
-    Get.put(CounselorChatController());
-  }),
-),
-GetPage(
-      name: AppRoutes.CHAT_SCREEN,
-      page: () => ClientChatScreen(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<ClientChatController>(() => ClientChatController());
-      }),
-    ),
+  GetPage(
+    name: AppRoutes.UPCOMING_APPOINTMENTS,
+    page: () => ViewAppointmentsScreen(), // You'll need to create this screen
+    binding: BindingsBuilder(() {
+      Get.lazyPut<CounselorController>(
+        () => CounselorController(
+          authService: Get.find<FirebaseAuthService>(),
+          dbService: Get.find<RealtimeDbService>(),
+        ),
+      );
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.COUNSELLOR_CHAT,
+    page: () => CounselorChatScreen(),
+    binding: BindingsBuilder(() {
+      // Use put() instead of lazyPut() to ensure immediate initialization
+      Get.put(CounselorChatController());
+    }),
+  ),
+  GetPage(
+    name: AppRoutes.CHAT_SCREEN,
+    page: () => ClientChatScreen(),
+    binding: BindingsBuilder(() {
+      Get.lazyPut<ClientChatController>(() => ClientChatController());
+    }),
+  ),
   GetPage(
     name: AppRoutes.INTERN_HOME,
     page: () => InternHomePage(),
     binding: InternBindings(),
   ),
-  // Add more pages here
+  GetPage(name: AppRoutes.LIST_OF_TESTS, page: () => ListOfTestsPage()),
+  GetPage(name: AppRoutes.CREATE_TESTS, page: () => CreateTestPage()),
+  
+  // New routes for article pages
+  GetPage(
+    name: AppRoutes.ALL_ARTICLES,
+    page: () => AllArticlesPage(),
+    binding: BindingsBuilder(() {
+      Get.lazyPut<ArticleController>(() => ArticleController());
+    }),
+    transition: Transition.fadeIn,
+  ),
+  GetPage(
+    name: AppRoutes.ARTICLE_DETAIL,
+    page: () => ArticleDetailsPage(),
+    binding: BindingsBuilder(() {
+      Get.lazyPut<ArticleController>(() => ArticleController());
+    }),
+    transition: Transition.rightToLeft,
+  ),
 ];
